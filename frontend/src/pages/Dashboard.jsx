@@ -2,6 +2,33 @@ import { motion } from "framer-motion";
 import CountUp from "react-countup";
 import { useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react"; // ✅ QR code library
+import {
+  // Navigation & Core
+  LayoutDashboard,
+  User,
+  LogOut,
+  ChevronRight,
+  Navigation,
+
+  // Search & Filters
+  Search,
+  MapPin,
+  Clock,
+
+  // Booking & Selection
+  Car,
+  CheckCircle2,
+  ShieldCheck,
+
+  // Ticket & Entry
+  Ticket,
+  Calendar,
+  CreditCard,
+  Download,
+  Scan,
+  LogIn,
+  QrCode,
+} from "lucide-react";
 
 export default function UserDashboard() {
   const TOTAL_SLOTS = 50;
@@ -207,597 +234,1014 @@ export default function UserDashboard() {
 
   return (
     <div
-      className="bg-gradient-to-br from-[#A8E6CF] to-[#D0F0FD] 
-           border border-transparent
-           rounded-2xl p-5 shadow-md
-           transition hover:shadow-lg text-[#0B2E33]"
+      className="bg-white/70 backdrop-blur-md border border-emerald-100/50 
+             rounded-[2.5rem] p-8 shadow-xl shadow-emerald-900/5 
+             transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-200/50
+             relative overflow-hidden group"
     >
-      <h1 className="text-2xl font-bold mb-6">👤 User Dashboard</h1>
-      {/* 🔥 USER STATISTICS */}
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
-        <StatCard
-          title="Total Bookings"
-          value={totalBookings}
-          bgColor="bg-[#DFF6E4]" // light green
-          shadowColor="shadow-lg"
-          valueColor="text-[#0B2E33]"
-          labelColor="text-[#4B5563]"
-        />
-        <StatCard
-          title="Active Parking"
-          value={activeParking}
-          bgColor="bg-[#DFF6E4]" // same light green for consistency
-          shadowColor="shadow-lg"
-          valueColor="text-[#28C76F]"
-          labelColor="text-[#4B5563]"
-        />
-        <StatCard
-          title="Amount Spent"
-          value={`₹${amountSpent}`}
-          bgColor="bg-[#DFF6E4]" // light pastel blue
-          shadowColor="shadow-lg"
-          valueColor="text-[#0B84FF]"
-        />
-      </div>
-      {/* SEARCH / PLACES - CLEAN CARD + VIEW IMAGE MODAL */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="bg-[#E6F7FF] rounded-3xl shadow-xl p-6 mb-8"
-      >
-        <h2 className="text-2xl font-bold mb-6 text-slate-900">
-          🔎 Search Parking Location
-        </h2>
-
-        {/* SEARCH + LOCATION */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          {/* Search Input */}
-          <div className="relative flex-1">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#0B2E33]/50 text-lg">
-              🔍
-            </span>
-            <input
-              type="text"
-              placeholder="Type to search..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full p-3 pl-12 rounded-2xl
-                 bg-gradient-to-br from-[#D0F0FD] to-[#A8E6CF]
-                 border border-transparent
-                 shadow-md
-                 focus:outline-none focus:ring-2 focus:ring-[#94AF6E]
-                 text-[#0B2E33] font-medium
-                 transition-all duration-300 hover:shadow-lg"
-            />
-          </div>
-
-          {/* Location Button */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={handleUseCurrentLocation}
-            className="bg-gradient-to-br from-[#A8E6CF] to-[#D0F0FD]
-               text-[#0B2E33] font-semibold
-               px-6 py-3 rounded-2xl shadow-md
-               transition-all duration-300 hover:shadow-lg"
+      <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-100/40 rounded-full blur-3xl group-hover:bg-emerald-200/60 transition-colors duration-700" />
+      <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-white rounded-full blur-3xl opacity-60" />
+      <div className="relative z-10">
+        {/* ===== PARKZEN USER HEADER ===== */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
           >
-            📍 Use My Location
-          </motion.button>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="bg-emerald-500 w-2 h-2 rounded-full animate-pulse" />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                Account Overview
+              </span>
+            </div>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+              Welcome, <span className="text-emerald-600">User</span>
+              <motion.span
+                animate={{ rotate: [0, 20, 0] }}
+                transition={{ repeat: Infinity, duration: 2, repeatDelay: 1 }}
+              >
+                👋
+              </motion.span>
+            </h1>
+            <p className="text-slate-500 font-medium mt-1">
+              You have{" "}
+              <span className="text-slate-900 font-bold">
+                {availableSlots} spots
+              </span>{" "}
+              available nearby.
+            </p>
+          </motion.div>
+
+          {/* Quick Actions / Date Display */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-3"
+          >
+            <div className="hidden sm:flex flex-col items-end mr-2">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                {new Date().toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </p>
+              <p className="text-sm font-bold text-slate-700">
+                {new Date().toLocaleDateString("en-US", {
+                  weekday: "long",
+                  day: "numeric",
+                })}
+              </p>
+            </div>
+            <div className="h-10 w-10 bg-white border border-slate-100 rounded-xl shadow-sm flex items-center justify-center text-slate-400">
+              <User size={20} />
+            </div>
+          </motion.div>
         </div>
-
-        {/* PLACE CARDS */}
-        <div className="grid md:grid-cols-3 gap-6">
-          {Object.keys(places)
-            .filter((p) => p.toLowerCase().includes(search.toLowerCase()))
-            .map((place, i) => {
-              const images = {
-                "City Mall":
-                  "https://source.unsplash.com/400x250/?mall,shopping",
-                Airport: "https://source.unsplash.com/400x250/?airport,plane",
-                "Tech Park":
-                  "https://source.unsplash.com/400x250/?office,technology",
-              };
-
-              return (
-                <motion.div
-                  key={place}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1, duration: 0.5 }}
-                  whileHover={{
-                    scale: 1.03,
-                    boxShadow: "0 15px 35px rgba(0,0,0,0.2)",
-                  }}
-                  onClick={() => handlePlaceSelect(place)}
-                  className="bg-white p-5 rounded-2xl shadow-lg cursor-pointer flex flex-col justify-between transition hover:shadow-xl"
-                >
-                  <div>
-                    <p className="font-bold text-lg mb-1 text-slate-800">
-                      {place}
-                    </p>
-                    <p className="text-gray-500 text-sm mb-1">
-                      {places[place].type}
-                    </p>
-                    <p className="text-gray-500 text-sm mb-1">
-                      Rate: ₹{places[place].rate}/hr
-                    </p>
-                    <p className="text-gray-500 text-sm mb-1">
-                      Slots: {places[place].slots}
-                    </p>
-                    <p className="text-gray-500 text-sm mb-2">
-                      Distance: {getDistance(places[place].coords)} km | ETA:{" "}
-                      {getEstimatedArrival(places[place].coords)}
-                    </p>
-                  </div>
-
-                  {/* BUTTONS */}
-                  <div className="flex gap-2 mt-2">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleNavigateToPlace(place);
-                      }}
-                      className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm shadow hover:bg-blue-700 transition"
-                    >
-                      Navigate
-                    </motion.button>
-
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setImageModal({
-                          open: true,
-                          src: images[place],
-                          title: place,
-                        });
-                      }}
-                      className="flex-1 bg-gray-200 text-slate-800 px-4 py-2 rounded-lg text-sm shadow hover:bg-gray-300 transition"
-                    >
-                      View Image
-                    </motion.button>
-                  </div>
-                </motion.div>
-              );
-            })}
+        {/* 🔥 USER STATISTICS */}
+        <div className="grid gap-6 md:grid-cols-3 mb-8">
+          <StatCard
+            title="Total Bookings"
+            value={totalBookings}
+            /* UX: Slate-to-Emerald wash. Stable, grounded, yet successful. */
+            bgColor="bg-gradient-to-br from-[#F8FAFC] to-[#ECFDF5] border border-[#E2E8F0]"
+            shadowColor="shadow-sm border-b-4 border-b-[#10B981]"
+            valueColor="text-[#065F46]" // Deep Emerald
+            labelColor="text-[#64748B]" // Soft Slate
+          />
+          <StatCard
+            title="Active Parking"
+            value={activeParking}
+            /* UX: Emerald core with a Slate border. Focuses on the "Live" data. */
+            bgColor="bg-gradient-to-br from-[#F1F5F9] to-[#F0FDF4] border border-[#E2E8F0]"
+            shadowColor="shadow-sm border-b-4 border-b-[#22C55E]"
+            valueColor="text-[#15803D]" // Mid Emerald
+            labelColor="text-[#64748B]" // Soft Slate
+          />
+          <StatCard
+            title="Amount Spent"
+            value={`₹${amountSpent}`}
+            /* UX: Premium Slate-Teal. Feels like a modern banking interface. */
+            bgColor="bg-gradient-to-br from-[#F8FAFC] to-[#F0FDFA] border border-[#E2E8F0]"
+            shadowColor="shadow-sm border-b-4 border-b-[#0D9488]"
+            valueColor="text-[#0F766E]" // Deep Teal/Emerald
+            labelColor="text-[#64748B]" // Soft Slate
+          />
         </div>
-      </motion.div>
-      {/* PLACE IMAGE MODAL */}
-      {imageModal.open && (
+        {/* SEARCH / PLACES - PARKZEN THEMED */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
-          onClick={() => setImageModal({ open: false, src: "", title: "" })}
+          transition={{ duration: 0.5 }}
+          className="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 p-8 mb-8 overflow-hidden relative"
         >
-          <motion.div
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0.8 }}
-            className="bg-white rounded-2xl overflow-hidden shadow-xl max-w-lg w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img
-              src={imageModal.src}
-              alt={imageModal.title}
-              className="w-full object-cover"
-            />
-            <div className="p-4 text-center">
-              <p className="font-bold text-lg text-slate-800">
-                {imageModal.title}
+          {/* Subtle Background Decoration */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full blur-3xl -mr-32 -mt-32 opacity-50" />
+
+          <div className="relative flex items-center gap-4 mb-8">
+            <div className="bg-emerald-600 text-white p-3 rounded-2xl shadow-lg shadow-emerald-200">
+              <Search size={24} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+                Search Parking Location
+              </h2>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
+                Find your zen spot
               </p>
-              <button
-                onClick={() =>
-                  setImageModal({ open: false, src: "", title: "" })
-                }
-                className="mt-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
-              >
-                Close
-              </button>
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-      {/* SLOTS */}
-      {selectedPlace && (
-        <div className="bg-[#FFFFFF] rounded-2xl shadow p-6 mb-8">
-          <h2 className="font-semibold mb-4 text-[#0B2E33]">
-            Parking Slots – {selectedPlace}
-          </h2>
-
-          <div className="grid grid-cols-5 gap-3">
-            {placeSlots.map((slot) => (
-              <div
-                key={slot.number}
-                onClick={() => !slot.occupied && setSelectedSlot(slot.number)}
-                className={`p-4 rounded-lg text-center text-sm font-medium cursor-pointer
-            ${
-              slot.occupied
-                ? "bg-[#EA5455]/20 text-[#EA5455] cursor-not-allowed" // occupied → error
-                : selectedSlot === slot.number
-                  ? "bg-[#FF9F43]/20 text-[#FF9F43]" // selected → warning
-                  : "bg-[#28C76F]/20 text-[#28C76F]" // available → success
-            }`}
-              >
-                Slot {slot.number}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {/* ===== BOOKING MODAL ===== */}
-      {selectedSlot && !ticket && (
-        <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.4 }}
-          className="bg-[#BCD8EC] rounded-3xl shadow-2xl p-6 mb-8 max-w-md mx-auto"
-        >
-          <h2 className="text-2xl font-bold mb-6 text-[#0B2E33] text-center">
-            📝 Booking Summary – {selectedPlace}
-          </h2>
-
-          <div className="bg-white/60 rounded-2xl p-4 shadow-md mb-4 backdrop-blur-sm">
-            <label className="flex items-center gap-2 mb-2 font-semibold text-[#0B2E33]">
-              Slot Type:
-            </label>
-            <select
-              className="w-full p-3 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-400 transition font-medium text-[#0B2E33]"
-              value={selectedSlotType}
-              onChange={(e) => setSelectedSlotType(e.target.value)}
-            >
-              <option value="Regular">Regular</option>
-              <option value="Premium">Premium (+20%)</option>
-            </select>
           </div>
 
-          <p className="text-[#0B2E33] font-medium text-lg mb-4">
-            Rate: ₹
-            {(
-              places[selectedPlace].rate *
-              (selectedSlotType === "Premium" ? 1.2 : 1)
-            ).toFixed(0)}
-            /hr
-          </p>
+          {/* SEARCH + LOCATION BOX */}
+          <div className="flex flex-col md:flex-row gap-4 mb-10">
+            <div className="relative flex-1">
+              <Search
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                size={18}
+              />
+              <input
+                type="text"
+                placeholder="Where are you heading?"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full p-4 pl-12 rounded-2xl bg-slate-50 border border-slate-200 
+                   focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500
+                   text-slate-700 font-medium transition-all duration-300 shadow-inner"
+              />
+            </div>
 
-          <div className="mb-4">
-            <label className="block mb-2 font-medium text-[#0B2E33]">
-              Payment Method:
-            </label>
-            <select
-              className="border p-3 rounded-lg w-full shadow-sm focus:ring-2 focus:ring-pink-300 transition font-medium text-[#0B2E33]"
-              value={selectedPayment}
-              onChange={(e) => setSelectedPayment(e.target.value)}
-            >
-              <option value="Wallet">Wallet</option>
-              <option value="UPI">UPI</option>
-              <option value="Card">Card</option>
-              <option value="Netbanking">Netbanking</option>
-            </select>
-          </div>
-
-          <motion.button
-            onClick={handleConfirmBookingWithPayment}
-            whileHover={{
-              scale: 1.03,
-              boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
-            }}
-            whileTap={{ scale: 0.97 }}
-            className="w-full bg-[#2E8857] text-white py-3 rounded-2xl font-semibold shadow-lg hover:bg-[#7f8b58] transition text-lg"
-          >
-            💳 Pay & Confirm Booking
-          </motion.button>
-        </motion.div>
-      )}
-      {/* ===== DIGITAL TICKET / QR CODE ===== */}
-      {ticket && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeInOut" }}
-          className="bg-[#BCD8EC] rounded-3xl shadow-lg p-6 mb-8 max-w-3xl mx-auto flex flex-col md:flex-row items-center md:items-start gap-6"
-        >
-          {/* Ticket Text */}
-          <motion.div
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="flex-1 text-left space-y-2"
-          >
-            <h2 className="text-2xl font-bold text-[#0B2E33] mb-2">
-              🎫 Digital Ticket
-            </h2>
-            <p className="text-[#0B2E33] font-medium">
-              <span className="font-semibold">Booking ID:</span>{" "}
-              {ticket.bookingId} <br />
-              <span className="font-semibold">Place:</span> {ticket.place}{" "}
-              <br />
-              <span className="font-semibold">Slot:</span> {ticket.slot} <br />
-              <span className="font-semibold">Slot Type:</span>{" "}
-              {ticket.slotType} <br />
-              <span className="font-semibold">Time:</span> {ticket.entryTime}{" "}
-              <br />
-              <span className="font-semibold">Payment:</span> {ticket.payment}{" "}
-              <br />
-              <span className="font-semibold">Amount:</span> ₹{ticket.amount}
-            </p>
-          </motion.div>
-
-          {/* QR Code */}
-          <motion.div
-            initial={{ x: 20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="flex-shrink-0 bg-white p-4 rounded-2xl shadow-md"
-          >
-            <QRCodeCanvas
-              value={JSON.stringify(ticket)}
-              size={160}
-              bgColor="#ffffff"
-              fgColor="#0B2E33"
-              level="H"
-            />
-          </motion.div>
-        </motion.div>
-      )}
-      ;{/* ===== ENTRY AT PARKING ===== */}
-      {ticket && !entryLogged && (
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeInOut" }}
-          className="bg-[#BCD8EC] rounded-3xl shadow-xl p-6 mb-6 max-w-3xl mx-auto flex flex-col md:flex-row items-center md:items-start gap-6"
-        >
-          {/* Text Section */}
-          <motion.div
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="flex-1 text-left"
-          >
-            <h3 className="text-2xl font-bold text-[#0B2E33] mb-2">
-              🚪 Entry at Parking
-            </h3>
-            <p className="text-[#0B2E33] mb-4">
-              Scan your QR code at the parking gate to log entry automatically.
-            </p>
             <motion.button
-              whileHover={{
-                scale: 1.05,
-                boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
-              }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => {
-                const now = new Date();
-                const timeString = now.toLocaleTimeString();
-
-                // 1️⃣ Log entry time
-                setEntryTime(timeString);
-                setEntryLogged(true);
-
-                // 2️⃣ Update booking start time
-                setBookings((prev) =>
-                  prev.map((b) =>
-                    b.id === ticket.bookingId ? { ...b, start: timeString } : b,
-                  ),
-                );
-
-                // 3️⃣ Activate While Parking card
-                setParkingActive(true);
-
-                // 4️⃣ Start duration timer
-                setParkingStartTime(now);
-              }}
-              className="w-full md:w-auto bg-gradient-to-r from-[#0B84FF] to-[#28C76F] text-white py-3 px-6 rounded-2xl font-bold shadow hover:from-[#0A6ECC] hover:to-[#20B95F] transition text-lg"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleUseCurrentLocation}
+              className="bg-slate-900 text-white font-bold px-8 py-4 rounded-2xl shadow-lg 
+                 flex items-center justify-center gap-2 hover:bg-slate-800 transition-all"
             >
-              Scan QR / Confirm Entry
+              <MapPin size={18} className="text-emerald-400" />
+              Use My Location
             </motion.button>
-          </motion.div>
+          </div>
 
-          {/* Optional Icon / Illustration */}
-          <motion.div
-            initial={{ x: 20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-6xl"
-          >
-            🚪
-          </motion.div>
-        </motion.div>
-      )}
-      {/* ===== WHILE PARKING ===== */}
-      {parkingActive && (
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeInOut" }}
-          className="bg-[#BCD8EC] rounded-3xl shadow-2xl p-6 mb-6 max-w-3xl mx-auto flex flex-col md:flex-row items-center gap-6"
-        >
-          {/* Text Section */}
-          <motion.div
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="flex-1 text-left"
-          >
-            <h3 className="text-2xl font-bold text-[#0B2E33] mb-3">
-              ⏱️ Parking in Progress
-            </h3>
-            <p className="text-[#0B2E33] mb-2">Entry Time: {entryTime}</p>
-            <p className="text-[#0B2E33] mb-4">
-              Parking Duration: {parkingDuration} min
-            </p>
+          {/* PLACE CARDS */}
+          <div className="grid md:grid-cols-3 gap-6">
+            {Object.keys(places)
+              .filter((p) => p.toLowerCase().includes(search.toLowerCase()))
+              .map((place, i) => {
+                const images = {
+                  "City Mall":
+                    "https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?auto=format&fit=crop&w=400&q=80",
+                  Airport:
+                    "https://images.unsplash.com/photo-1436491865332-7a61a109c0f3?auto=format&fit=crop&w=400&q=80",
+                  "Tech Park":
+                    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&q=80",
+                };
 
-            <div className="flex flex-col md:flex-row gap-3">
-              <motion.button
-                whileHover={{
-                  scale: 1.05,
-                  boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
-                }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => alert("Extend Parking Feature Coming Soon!")}
-                className="flex-1 bg-gradient-to-r from-[#FFD166] to-[#F0A500] text-[#0B2E33] py-3 rounded-2xl font-semibold shadow transition"
-              >
-                ➕ Extend Parking
-              </motion.button>
-
-              <motion.button
-                whileHover={{
-                  scale: 1.05,
-                  boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
-                }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => {
-                  setParkingActive(false);
-                  alert("Parking Ended!");
-                }}
-                className="flex-1 bg-gradient-to-r from-[#FF6B6B] to-[#D72638] text-white py-3 rounded-2xl font-semibold shadow transition"
-              >
-                🛑 End Parking
-              </motion.button>
-            </div>
-          </motion.div>
-
-          {/* Icon / Illustration */}
-          <motion.div
-            initial={{ x: 20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-6xl"
-          >
-            🚗
-          </motion.div>
-        </motion.div>
-      )}
-      {/* ===== REAL-TIME SLOT STATS ===== */}
-      <div className="grid gap-6 md:grid-cols-4 mb-8">
-        <StatCard
-          title="Total Slots"
-          value={TOTAL_SLOTS}
-          bgColor="bg-[#FFF4D6]" // soft light blue background
-          valueColor="text-[#0B84FF]" // blue for number
-          shadowColor="shadow-lg"
-        />
-        <StatCard
-          title="Available Slots"
-          value={availableSlots}
-          bgColor="bg-[#FFF4D6]" // light gentle yellow
-          valueColor="text-[#28C76F]"
-          shadowColor="shadow-lg"
-        />
-        <StatCard
-          title="Occupied Slots"
-          value={occupiedSlots}
-          bgColor="bg-[#FFF4D6]"
-          valueColor="text-[#D72638]"
-          shadowColor="shadow-lg"
-        />
-        <div className="bg-[#FFF4D6] rounded-2xl shadow-lg p-6 flex items-center justify-center">
-          <span
-            className={`px-4 py-2 rounded-full font-semibold text-white ${
-              getStatusColor() === "bg-green-500"
-                ? "bg-green-500"
-                : getStatusColor() === "bg-red-500"
-                  ? "bg-red-500"
-                  : "bg-yellow-500"
-            } transition-all`}
-          >
-            Live Status
-          </span>
-        </div>
-      </div>
-      {/* MY BOOKINGS */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="bg-[#D7F0FA] rounded-3xl shadow-xl p-6"
-      >
-        <h2 className="text-xl font-semibold mb-6 text-[#0B3D91]">
-          📋 My Bookings
-        </h2>
-
-        <div className="space-y-4">
-          {bookings.length === 0 && (
-            <div className="text-center py-10 text-[#4B5563]">
-              No bookings yet 🚗
-            </div>
-          )}
-
-          {bookings.map((b, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              whileHover={{
-                scale: 1.02,
-                boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
-              }}
-              className="bg-white 
-           border border-[#D1D5DB] 
-           rounded-2xl p-5 shadow-md 
-           transition hover:shadow-lg"
-            >
-              <div className="flex justify-between items-center mb-3">
-                <div>
-                  <p className="font-semibold text-[#0B3D91]">
-                    Booking ID: {b.id}
-                  </p>
-                  <p className="text-sm text-[#4B5563]">{b.slot}</p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${
-                      b.status === "Active"
-                        ? "bg-[#64DD17] text-white" // Light green
-                        : b.status === "Completed"
-                          ? "bg-[#29B6F6] text-white" // Light blue
-                          : "bg-[#FF8A80] text-white" // Red for Cancelled
-                    }`}
+                return (
+                  <motion.div
+                    key={place}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    whileHover={{ y: -5 }}
+                    onClick={() => handlePlaceSelect(place)}
+                    className="group bg-white border border-slate-100 rounded-[1.5rem] shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden"
                   >
-                    {b.status}
-                  </span>
+                    {/* Image Preview Container */}
+                    <div className="h-32 w-full overflow-hidden relative">
+                      <img
+                        src={images[place]}
+                        alt={place}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                      <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-[10px] font-bold text-emerald-700">
+                        ₹{places[place].rate}/hr
+                      </div>
+                    </div>
 
-                  {b.status === "Active" && (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleCancelBooking(b.id)}
-                      className="bg-[#FF8A80] text-white px-3 py-1 rounded-lg text-xs shadow hover:bg-[#F44336] transition"
-                    >
-                      Cancel
-                    </motion.button>
-                  )}
-                </div>
-              </div>
+                    <div className="p-5">
+                      <h3 className="font-black text-slate-800 text-lg mb-1">
+                        {place}
+                      </h3>
+                      <div className="flex items-center gap-2 text-slate-500 text-[11px] mb-3 uppercase tracking-wider font-bold">
+                        <Car size={12} className="text-emerald-500" />
+                        {places[place].type} • {places[place].slots} Slots Left
+                      </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-[#4B5563]">
-                <div>
-                  <p className="text-[#9CA3AF] text-xs">Start Time</p>
-                  <p className="font-medium text-[#0B3D91]">{b.start}</p>
-                </div>
+                      <div className="space-y-1.5 mb-5">
+                        <div className="flex items-center justify-between text-xs text-slate-600">
+                          <span className="flex items-center gap-1.5">
+                            <MapPin size={12} /> Distance
+                          </span>
+                          <span className="font-bold text-slate-900">
+                            {getDistance(places[place].coords)} km
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-slate-600">
+                          <span className="flex items-center gap-1.5">
+                            <Clock size={12} /> Arrival
+                          </span>
+                          <span className="font-bold text-slate-900">
+                            {getEstimatedArrival(places[place].coords)}
+                          </span>
+                        </div>
+                      </div>
 
-                <div>
-                  <p className="text-[#9CA3AF] text-xs">Amount</p>
-                  <p className="font-medium text-[#388E3C]">₹{b.amount}</p>
-                </div>
-
-                <div>
-                  <p className="text-[#9CA3AF] text-xs">Status</p>
-                  <p className="font-medium text-[#0B3D91]">{b.status}</p>
-                </div>
+                      <div className="flex gap-2">
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleNavigateToPlace(place);
+                          }}
+                          className="flex-1 bg-emerald-600 text-white py-2.5 rounded-xl text-xs font-bold shadow-md shadow-emerald-200 hover:bg-emerald-700 transition"
+                        >
+                          Navigate
+                        </motion.button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setImageModal({
+                              open: true,
+                              src: images[place],
+                              title: place,
+                            });
+                          }}
+                          className="px-3 bg-slate-50 text-slate-400 hover:text-slate-600 rounded-xl border border-slate-100 transition"
+                        >
+                          <Search size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+          </div>
+        </motion.div>
+        {/* PLACE IMAGE MODAL */}
+        {imageModal.open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+            onClick={() => setImageModal({ open: false, src: "", title: "" })}
+          >
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.8 }}
+              className="bg-white rounded-2xl overflow-hidden shadow-xl max-w-lg w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={imageModal.src}
+                alt={imageModal.title}
+                className="w-full object-cover"
+              />
+              <div className="p-4 text-center">
+                <p className="font-bold text-lg text-slate-800">
+                  {imageModal.title}
+                </p>
+                <button
+                  onClick={() =>
+                    setImageModal({ open: false, src: "", title: "" })
+                  }
+                  className="mt-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+                >
+                  Close
+                </button>
               </div>
             </motion.div>
-          ))}
+          </motion.div>
+        )}
+        {/* SLOTS */}
+        {selectedPlace && (
+          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 p-8 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+              <div>
+                <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+                  Select Your Spot
+                </h2>
+                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">
+                  {selectedPlace} •{" "}
+                  {placeSlots.filter((s) => !s.occupied).length} Available
+                </p>
+              </div>
+
+              {/* Visual Legend */}
+              <div className="flex gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">
+                    Open
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-slate-300" />
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">
+                    Taken
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+              {placeSlots.map((slot) => {
+                const isOccupied = slot.occupied;
+                const isSelected = selectedSlot === slot.number;
+
+                return (
+                  <motion.div
+                    key={slot.number}
+                    whileHover={!isOccupied ? { y: -4, scale: 1.02 } : {}}
+                    whileTap={!isOccupied ? { scale: 0.98 } : {}}
+                    onClick={() => !isOccupied && setSelectedSlot(slot.number)}
+                    className={`
+              relative p-6 rounded-2xl text-center transition-all duration-300 border-2 cursor-pointer
+              ${
+                isOccupied
+                  ? "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
+                  : isSelected
+                    ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-200"
+                    : "bg-white border-emerald-50 text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50/30"
+              }
+            `}
+                  >
+                    {/* Slot Number Icon View */}
+                    <div className="flex flex-col items-center gap-1">
+                      <Car
+                        size={16}
+                        className={
+                          isOccupied
+                            ? "opacity-20"
+                            : isSelected
+                              ? "text-white"
+                              : "text-emerald-500"
+                        }
+                      />
+                      <span
+                        className={`text-sm font-black ${isSelected ? "text-white" : "text-slate-700"}`}
+                      >
+                        {slot.number}
+                      </span>
+                    </div>
+
+                    {/* Selection Checkmark */}
+                    {isSelected && (
+                      <div className="absolute -top-2 -right-2 bg-white text-emerald-600 rounded-full p-1 shadow-md border border-emerald-100">
+                        <CheckCircle2 size={14} />
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {selectedSlot && (
+              <div className="mt-8 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center justify-between animate-in zoom-in-95">
+                <p className="text-emerald-800 text-sm font-medium">
+                  Ready to park in{" "}
+                  <span className="font-black">Slot {selectedSlot}</span>?
+                </p>
+                <button className="bg-emerald-600 text-white px-6 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors">
+                  Confirm Spot
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        {/* ===== PARKZEN BOOKING MODAL ===== */}
+        {selectedSlot && !ticket && (
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.4 }}
+            className="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl p-8 mb-8 max-w-md mx-auto relative overflow-hidden"
+          >
+            {/* Background Design Accents for Depth */}
+            <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-50 rounded-full blur-3xl opacity-60" />
+            <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-slate-50 rounded-full blur-3xl opacity-60" />
+
+            <div className="relative">
+              {/* Header Section */}
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl mb-4 shadow-inner">
+                  <Calendar size={28} />
+                </div>
+                <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+                  Booking Summary
+                </h2>
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <span className="bg-slate-100 text-slate-600 text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-tighter">
+                    {selectedPlace}
+                  </span>
+                  <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-tighter">
+                    Slot {selectedSlot}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {/* Slot Category Selection */}
+                <div className="group bg-slate-50 border border-slate-100 rounded-2xl p-4 transition-all focus-within:ring-4 focus-within:ring-emerald-500/10 focus-within:border-emerald-200">
+                  <label className="flex items-center gap-2 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <ShieldCheck size={14} className="text-emerald-500" />
+                    Spot Category
+                  </label>
+                  <div className="relative">
+                    <select
+                      className="w-full bg-transparent outline-none font-bold text-slate-800 appearance-none cursor-pointer relative z-10"
+                      value={selectedSlotType}
+                      onChange={(e) => setSelectedSlotType(e.target.value)}
+                    >
+                      <option value="Regular">Regular Spot</option>
+                      <option value="Premium">Premium Spot (+20%)</option>
+                    </select>
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <ChevronRight
+                        size={16}
+                        className="rotate-90 text-slate-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Method Selection */}
+                <div className="group bg-slate-50 border border-slate-100 rounded-2xl p-4 transition-all focus-within:ring-4 focus-within:ring-emerald-500/10 focus-within:border-emerald-200">
+                  <label className="flex items-center gap-2 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <CreditCard size={14} className="text-emerald-500" />
+                    Payment Method
+                  </label>
+                  <div className="relative">
+                    <select
+                      className="w-full bg-transparent outline-none font-bold text-slate-800 appearance-none cursor-pointer relative z-10"
+                      value={selectedPayment}
+                      onChange={(e) => setSelectedPayment(e.target.value)}
+                    >
+                      <option value="Wallet">ParkZen Wallet</option>
+                      <option value="UPI">UPI (Google Pay/PhonePe)</option>
+                      <option value="Card">Credit / Debit Card</option>
+                      <option value="Netbanking">Netbanking</option>
+                    </select>
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <ChevronRight
+                        size={16}
+                        className="rotate-90 text-slate-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pricing Summary Visualization */}
+                <div className="bg-emerald-600 rounded-2xl p-5 text-white shadow-xl shadow-emerald-200 mt-6 relative overflow-hidden">
+                  <div className="relative z-10">
+                    <div className="flex justify-between items-end">
+                      <div>
+                        <p className="text-emerald-100 text-[10px] font-bold uppercase tracking-widest">
+                          Total Rate
+                        </p>
+                        <h3 className="text-3xl font-black">
+                          ₹
+                          {(
+                            places[selectedPlace].rate *
+                            (selectedSlotType === "Premium" ? 1.2 : 1)
+                          ).toFixed(0)}
+                          <span className="text-sm font-medium opacity-80 ml-1">
+                            /hr
+                          </span>
+                        </h3>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-emerald-100 text-[10px] font-bold uppercase tracking-widest">
+                          ETA
+                        </p>
+                        <p className="font-bold text-sm">
+                          {getEstimatedArrival(places[selectedPlace].coords)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="mt-8 space-y-3">
+                <motion.button
+                  onClick={handleConfirmBookingWithPayment}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black shadow-xl shadow-slate-200 flex items-center justify-center gap-3 hover:bg-slate-800 transition-all text-lg"
+                >
+                  <CreditCard size={20} className="text-emerald-400" />
+                  Pay & Confirm
+                </motion.button>
+
+                <button
+                  onClick={() => setSelectedSlot(null)}
+                  className="w-full py-2 text-slate-400 text-xs font-bold hover:text-slate-600 transition-colors uppercase tracking-widest"
+                >
+                  Cancel Selection
+                </button>
+              </div>
+
+              <p className="text-center text-[9px] text-slate-400 mt-4 px-6 leading-tight font-medium">
+                Secure encrypted payment via ParkZen Gateway. By confirming, you
+                agree to our Terms of Service.
+              </p>
+            </div>
+          </motion.div>
+        )}
+        {/* ===== PARKZEN DIGITAL TICKET ===== */}
+        {ticket && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="max-w-2xl mx-auto mb-12 relative"
+          >
+            {/* Success Badge */}
+            <div className="flex justify-center -mb-6 relative z-10">
+              <div className="bg-emerald-500 text-white p-2 rounded-full shadow-lg shadow-emerald-200 border-4 border-white">
+                <CheckCircle2 size={32} />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl flex flex-col md:flex-row overflow-hidden">
+              {/* LEFT SIDE: TICKET INFO */}
+              <div className="flex-1 p-8 pt-10 border-b-2 md:border-b-0 md:border-r-2 border-dashed border-slate-100 relative">
+                {/* Aesthetic Ticket "Cuts" */}
+                <div className="hidden md:block absolute -top-4 -right-4 w-8 h-8 bg-slate-50 rounded-full" />
+                <div className="hidden md:block absolute -bottom-4 -right-4 w-8 h-8 bg-slate-50 rounded-full" />
+
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="bg-slate-900 text-white p-2 rounded-xl">
+                    <Ticket size={20} />
+                  </div>
+                  <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+                    Digital Ticket
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-2 gap-y-4 gap-x-6">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Booking ID
+                    </p>
+                    <p className="font-bold text-slate-700">
+                      {ticket.bookingId.substring(0, 12)}...
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Location
+                    </p>
+                    <p className="font-bold text-slate-700">{ticket.place}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Slot / Type
+                    </p>
+                    <p className="font-bold text-slate-700">
+                      {ticket.slot}{" "}
+                      <span className="text-emerald-500 text-xs">
+                        ({ticket.slotType})
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Entry Time
+                    </p>
+                    <p className="font-bold text-slate-700">
+                      {ticket.entryTime}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Amount Paid
+                    </p>
+                    <p className="text-2xl font-black text-emerald-600">
+                      ₹{ticket.amount}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Status
+                    </p>
+                    <span className="text-xs font-black text-emerald-500 bg-emerald-50 px-3 py-1 rounded-full uppercase">
+                      Confirmed
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT SIDE: QR CODE */}
+              <div className="bg-slate-50 p-10 flex flex-col items-center justify-center gap-4">
+                <div className="bg-white p-4 rounded-[2rem] shadow-xl shadow-slate-200 border border-white">
+                  <QRCodeCanvas
+                    value={JSON.stringify(ticket)}
+                    size={140}
+                    bgColor="#ffffff"
+                    fgColor="#1e293b" // slate-800
+                    level="H"
+                  />
+                </div>
+                <p className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-tighter">
+                  Scan at entry point <br /> to open gate
+                </p>
+
+                <div className="flex flex-col w-full gap-2 mt-2">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-white border border-slate-200 text-slate-600 py-2 rounded-xl text-xs font-bold shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <Download size={14} /> Download
+                  </motion.button>
+                </div>
+              </div>
+            </div>
+
+            {/* Floating Actions */}
+            <div className="flex justify-center gap-4 mt-8">
+              <motion.button
+                whileHover={{ y: -4 }}
+                className="bg-slate-900 text-white px-8 py-3 rounded-2xl font-bold shadow-lg flex items-center gap-2"
+              >
+                <Navigation size={18} className="text-emerald-400" />
+                Navigate to Slot
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+        ;{/* ===== ENTRY AT PARKING ===== */}
+        {/* ===== PARKZEN ENTRY GATE SCANNER ===== */}
+        {ticket && !entryLogged && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="bg-white rounded-[2.5rem] border-2 border-dashed border-emerald-100 shadow-2xl shadow-emerald-100/50 p-8 mb-8 max-w-3xl mx-auto relative overflow-hidden"
+          >
+            {/* Animated Scanner Beam Effect */}
+            <motion.div
+              animate={{ translateY: [0, 200, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+              className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-400/30 to-transparent z-0"
+            />
+
+            <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+              {/* Icon Section */}
+              <div className="flex-shrink-0">
+                <div className="w-24 h-24 bg-emerald-50 rounded-[2rem] flex items-center justify-center text-emerald-600 relative">
+                  <Scan size={48} strokeWidth={1.5} className="animate-pulse" />
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full border-4 border-white" />
+                </div>
+              </div>
+
+              {/* Text Section */}
+              <motion.div
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="flex-1 text-center md:text-left"
+              >
+                <h3 className="text-2xl font-black text-slate-800 tracking-tight mb-2">
+                  Gate Arrival
+                </h3>
+                <p className="text-slate-500 text-sm font-medium mb-6 leading-relaxed">
+                  You are at{" "}
+                  <span className="text-slate-800 font-bold">
+                    {ticket.place}
+                  </span>
+                  . Scan your digital ticket at the sensor to lift the barrier
+                  and start your session.
+                </p>
+
+                <motion.button
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    const now = new Date();
+                    const timeString = now.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
+
+                    setEntryTime(timeString);
+                    setEntryLogged(true);
+
+                    setBookings((prev) =>
+                      prev.map((b) =>
+                        b.id === ticket.bookingId
+                          ? { ...b, start: timeString }
+                          : b,
+                      ),
+                    );
+
+                    setParkingActive(true);
+                    setParkingStartTime(now);
+                  }}
+                  className="w-full md:w-auto bg-slate-900 text-white py-4 px-8 rounded-2xl font-black shadow-xl shadow-slate-200 flex items-center justify-center gap-3 hover:bg-emerald-600 transition-all duration-300 group"
+                >
+                  <LogIn
+                    size={20}
+                    className="text-emerald-400 group-hover:text-white"
+                  />
+                  Confirm Entry & Open Gate
+                </motion.button>
+              </motion.div>
+
+              {/* Status Badge */}
+              <div className="hidden lg:block">
+                <div className="rotate-12 border-4 border-slate-100 rounded-2xl p-4 text-slate-100 font-black text-xl uppercase tracking-widest select-none">
+                  Ready to <br /> Park
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+        {/* ===== PARKZEN ACTIVE SESSION ===== */}
+        {parkingActive && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-slate-900 rounded-[2.5rem] shadow-2xl p-8 mb-8 max-w-3xl mx-auto relative overflow-hidden text-white"
+          >
+            {/* Decorative Background Element */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -mr-32 -mt-32" />
+
+            <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
+              {/* Visual Timer Section */}
+              <div className="relative flex-shrink-0">
+                <div className="w-32 h-32 rounded-full border-4 border-emerald-500/20 flex items-center justify-center">
+                  <div className="text-center">
+                    <span className="block text-3xl font-black text-emerald-400 leading-none">
+                      {parkingDuration}
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500/60">
+                      Mins
+                    </span>
+                  </div>
+                </div>
+                {/* Pulsing indicator */}
+                <div className="absolute top-2 right-2 w-4 h-4 bg-emerald-500 rounded-full animate-ping" />
+                <div className="absolute top-2 right-2 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-900" />
+              </div>
+
+              {/* Info Section */}
+              <div className="flex-1 text-center md:text-left">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full mb-4">
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">
+                    Live Session
+                  </span>
+                </div>
+
+                <h3 className="text-2xl font-black mb-1 tracking-tight">
+                  Parking in Progress
+                </h3>
+                <p className="text-slate-400 text-sm font-medium mb-6">
+                  Location:{" "}
+                  <span className="text-white">
+                    {ticket?.place || "Premium Spot"}
+                  </span>{" "}
+                  • Joined at {entryTime}
+                </p>
+
+                <div className="flex flex-wrap gap-4">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => alert("Extend Parking Feature Coming Soon!")}
+                    className="flex-1 min-w-[140px] bg-slate-800 border border-slate-700 text-white py-3 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-700 transition-all"
+                  >
+                    <Clock size={18} className="text-emerald-400" />
+                    Extend
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      setParkingActive(false);
+                      alert("Parking Ended!");
+                    }}
+                    className="flex-1 min-w-[140px] bg-red-500/10 border border-red-500/20 text-red-400 py-3 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all"
+                  >
+                    <LogOut size={18} />
+                    End Session
+                  </motion.button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+        {/* ===== REAL-TIME SLOT STATS ===== */}
+        {/* ===== PARKZEN STATS OVERVIEW ===== */}
+        <div className="grid gap-6 grid-cols-2 md:grid-cols-4 mb-10">
+          <StatCard
+            title="Total Capacity"
+            value={TOTAL_SLOTS}
+            icon={<LayoutDashboard size={18} />}
+            bgColor="bg-white"
+            valueColor="text-slate-800"
+            borderColor="border-slate-100"
+          />
+          <StatCard
+            title="Available Now"
+            value={availableSlots}
+            icon={<CheckCircle2 size={18} />}
+            bgColor="bg-white"
+            valueColor="text-emerald-600"
+            borderColor="border-emerald-50"
+          />
+          <StatCard
+            title="Currently In Use"
+            value={occupiedSlots}
+            icon={<Car size={18} />}
+            bgColor="bg-white"
+            valueColor="text-slate-400"
+            borderColor="border-slate-100"
+          />
+
+          {/* Dynamic Status Card */}
+          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 flex flex-col items-center justify-center relative overflow-hidden group">
+            {/* Subtle Background Glow based on status */}
+            <div
+              className={`absolute -inset-1 opacity-20 blur-2xl transition-all duration-500 ${
+                availableSlots > 5
+                  ? "bg-emerald-400"
+                  : availableSlots > 0
+                    ? "bg-amber-400"
+                    : "bg-red-400"
+              }`}
+            />
+
+            <div className="relative z-10 flex flex-col items-center">
+              <div className="flex items-center gap-2 mb-2">
+                <span
+                  className={`w-2 h-2 rounded-full animate-pulse ${
+                    availableSlots > 5
+                      ? "bg-emerald-500"
+                      : availableSlots > 0
+                        ? "bg-amber-500"
+                        : "bg-red-500"
+                  }`}
+                />
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  System
+                </span>
+              </div>
+
+              <p
+                className={`text-sm font-black uppercase tracking-tighter transition-colors ${
+                  availableSlots > 5
+                    ? "text-emerald-600"
+                    : availableSlots > 0
+                      ? "text-amber-600"
+                      : "text-red-600"
+                }`}
+              >
+                {availableSlots > 5
+                  ? "All Systems Go"
+                  : availableSlots > 0
+                    ? "Limited Space"
+                    : "Parking Full"}
+              </p>
+            </div>
+          </div>
         </div>
-      </motion.div>
+        {/* MY BOOKINGS */}
+        {/* ===== PARKZEN BOOKINGS LIST ===== */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 p-8"
+        >
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="bg-slate-900 text-white p-2 rounded-xl">
+                <Clock size={20} />
+              </div>
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+                Recent Activity
+              </h2>
+            </div>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-slate-50 px-3 py-1 rounded-full">
+              {bookings.length} Total
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            {bookings.length === 0 && (
+              <div className="text-center py-16 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-100">
+                <Car size={48} className="mx-auto text-slate-200 mb-4" />
+                <p className="text-slate-400 font-bold tracking-tight">
+                  No active history found.
+                </p>
+                <p className="text-slate-300 text-xs">
+                  Your future bookings will appear here.
+                </p>
+              </div>
+            )}
+
+            {bookings.map((b, i) => (
+              <motion.div
+                key={b.id || i}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+                whileHover={{ x: 5 }}
+                className="group relative bg-white border border-slate-100 rounded-[1.5rem] p-5 transition-all hover:border-emerald-100 hover:shadow-xl hover:shadow-slate-200/40"
+              >
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  {/* Left: Booking Main Info */}
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                        b.status === "Active"
+                          ? "bg-emerald-50 text-emerald-600"
+                          : b.status === "Completed"
+                            ? "bg-slate-50 text-slate-400"
+                            : "bg-red-50 text-red-500"
+                      }`}
+                    >
+                      {b.status === "Active" ? (
+                        <Navigation size={20} />
+                      ) : (
+                        <CheckCircle2 size={20} />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                        ID: {b.id.substring(0, 8)}...
+                      </p>
+                      <h4 className="font-bold text-slate-800 tracking-tight leading-none">
+                        {b.place || "Standard Slot"} • {b.slot}
+                      </h4>
+                    </div>
+                  </div>
+
+                  {/* Right: Status & Actions */}
+                  <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-none pt-4 md:pt-0">
+                    <div className="text-right">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                        Amount
+                      </p>
+                      <p className="font-black text-slate-800 tracking-tighter">
+                        ₹{b.amount}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                          b.status === "Active"
+                            ? "bg-emerald-500 text-white shadow-lg shadow-emerald-200"
+                            : b.status === "Completed"
+                              ? "bg-slate-100 text-slate-500"
+                              : "bg-red-50 text-red-500"
+                        }`}
+                      >
+                        {b.status}
+                      </span>
+
+                      {b.status === "Active" && (
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleCancelBooking(b.id)}
+                          className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                          title="Cancel Booking"
+                        >
+                          <LogOut size={18} className="rotate-180" />
+                        </motion.button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Timeline Metadata Footer */}
+                <div className="mt-4 flex items-center gap-6 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar size={12} className="text-slate-300" />
+                    Started: {b.start}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <ShieldCheck size={12} className="text-emerald-400" />
+                    Verified Session
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }
@@ -805,17 +1249,17 @@ export default function UserDashboard() {
 function StatCard({
   title,
   value,
+  icon, // New prop for Lucide icons
   bgColor = "bg-white",
   valueColor = "text-slate-800",
-  shadowColor = "shadow-md",
+  borderColor = "border-slate-100", // New prop for subtle borders
 }) {
-  // Safely extract number
+  // Extract number for CountUp: remove non-digits but keep the first decimal if present
   const numericValue =
     typeof value === "number"
       ? value
-      : parseInt(String(value).replace(/[^\d]/g, ""), 10) || 0;
+      : parseFloat(String(value).replace(/[^0-9.]/g, "")) || 0;
 
-  // Detect currency
   const isCurrency = typeof value === "string" && value.includes("₹");
 
   return (
@@ -823,14 +1267,29 @@ function StatCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      whileHover={{ scale: 1.05 }}
-      className={`${bgColor} rounded-2xl p-6 ${shadowColor} hover:shadow-xl`}
+      whileHover={{ y: -5, transition: { duration: 0.2 } }}
+      className={`${bgColor} ${borderColor} border-2 rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 flex flex-col items-center text-center transition-all`}
     >
-      <p className="text-sm text-gray-500">{title}</p>
+      {/* Icon Wrapper */}
+      {icon && (
+        <div className="text-slate-300 mb-3 group-hover:text-emerald-500 transition-colors">
+          {icon}
+        </div>
+      )}
 
-      <h3 className={`text-3xl font-bold mt-2 ${valueColor}`}>
-        {isCurrency && "₹"}
-        <CountUp end={numericValue} duration={1.5} />
+      {/* Title with Zen Typography */}
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">
+        {title}
+      </p>
+
+      {/* Value with CountUp Animation */}
+      <h3
+        className={`text-3xl font-black ${valueColor} tracking-tighter flex items-center gap-1`}
+      >
+        {isCurrency && (
+          <span className="text-xl opacity-50 font-medium">₹</span>
+        )}
+        <CountUp end={numericValue} duration={2} separator="," />
       </h3>
     </motion.div>
   );

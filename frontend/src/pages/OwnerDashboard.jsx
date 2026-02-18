@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Html5QrcodeScanner } from "html5-qrcode";
 import {
   LayoutDashboard,
   Car,
@@ -17,6 +18,8 @@ import {
   CheckCircle2,
   XCircle,
   Search,
+  MessageSquare, // <--- ADD THIS
+  Star, // <--- ADD THIS
 } from "lucide-react";
 
 const OwnerDashboard = () => {
@@ -82,7 +85,120 @@ const OwnerDashboard = () => {
       payment: "Pending",
     },
   ]);
+  // --- NEW SCANNER STATE ---
+  const [scannedBooking, setScannedBooking] = useState(null);
+  const [scanError, setScanError] = useState("");
+  useEffect(() => {
+    // Only initialize scanner if the active tab is "scan"
+    if (activeTab === "scan") {
+      const scanner = new Html5QrcodeScanner("reader", {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+      });
 
+      scanner.render(
+        (decodedText) => {
+          scanner.clear(); // Stop camera
+          handleProcessQR(decodedText);
+        },
+        (err) => {
+          /* ignore scan errors */
+        },
+      );
+
+      return () => scanner.clear();
+    }
+  }, [activeTab]);
+
+  const handleProcessQR = (idFromQR) => {
+    // 1. Clean the scanned text (in case of spaces or hidden characters)
+    const cleanId = idFromQR.trim();
+
+    // 2. Find the user in your 'bookings' state
+    const foundBooking = bookings.find((b) => b.id === cleanId);
+
+    if (foundBooking) {
+      // 3. Update Success state
+      setScannedBooking(foundBooking);
+      setScanError("");
+
+      // 4. Add to 'activeSessions' (the table at the bottom of your screen)
+      const newEntry = {
+        ...foundBooking,
+        entryTime: new Date().toLocaleTimeString(),
+      };
+      setActiveSessions((prev) => [...prev, newEntry]);
+
+      // 5. Trigger the Gate UI
+      setGateStatus("Open");
+
+      // Auto-close gate after 4 seconds
+      setTimeout(() => {
+        setGateStatus("Closed");
+        setScannedBooking(null); // Reset for next scan
+      }, 4000);
+    } else {
+      // 6. Handle Error
+      setScanError(`ID "${cleanId}" not found in current bookings.`);
+      setScannedBooking(null);
+    }
+  };
+  // --- ADD THIS RIGHT AFTER handleProcessQR ---
+  const [isScanning, setIsScanning] = useState(false);
+
+  const startCamera = async () => {
+    setIsScanning(true);
+    // Ensure we are using the lower-level Html5Qrcode for better control
+    const { Html5Qrcode } = await import("html5-qrcode");
+    const html5QrCode = new Html5Qrcode("reader");
+
+    try {
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+        },
+        (decodedText) => {
+          handleProcessQR(decodedText);
+          html5QrCode.stop();
+          setIsScanning(false);
+        },
+      );
+    } catch (err) {
+      console.error("Camera start error:", err);
+      setIsScanning(false);
+      alert("Camera permission denied or not found.");
+    }
+  };
+  const handleExit = (sessionId) => {
+    const sessionToExit = activeSessions.find((s) => s.id === sessionId);
+
+    if (sessionToExit) {
+      const historyLog = {
+        user: sessionToExit.user,
+        // Your table uses log.entry, so we must save it as 'entry'
+        entry: sessionToExit.entryTime || sessionToExit.entry || "N/A",
+        // Your table uses log.exit, so we must save it as 'exit'
+        exit: new Date().toLocaleTimeString(),
+      };
+
+      // 1. Update History
+      setGateHistory((prev) => [historyLog, ...prev]);
+
+      // 2. Clear from Active Sessions
+      setActiveSessions((prev) => prev.filter((s) => s.id !== sessionId));
+
+      // 3. Reset Slot Status
+      setSlots((prev) =>
+        prev.map((slot) =>
+          slot.name === sessionToExit.slot
+            ? { ...slot, status: "available" }
+            : slot,
+        ),
+      );
+    }
+  };
   // --- FEATURE 2 & 4: SLOT & GATE LOGIC ---
   const toggleGate = (slotId) => {
     setSlots(
@@ -120,7 +236,7 @@ const OwnerDashboard = () => {
       <aside className="w-64 bg-slate-900 p-6 flex flex-col gap-2">
         <div className="flex items-center gap-2 text-white mb-8 px-2">
           <ShieldCheck className="text-blue-500" size={32} />
-          <h1 className="text-xl font-bold tracking-tight">ParkAdmin Pro</h1>
+          <h1 className="text-xl font-bold tracking-tight">ParkZen Owner </h1>
         </div>
 
         <SidebarItem
@@ -202,6 +318,156 @@ const OwnerDashboard = () => {
             ))}
           </div>
         )}
+        {/* FEATURE 4: ENTRY / EXIT (QR SCANNER) */}
+        {activeTab === "gate" && (
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-6 border-b border-gray-100 bg-slate-50 flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-bold">Gate Terminal</h3>
+                  <p className="text-sm text-gray-500">
+                    Scan user QR code for entry validation
+                  </p>
+                </div>
+                <div
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${gateStatus === "Open" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                >
+                  Gate: {gateStatus}
+                </div>
+              </div>
+
+              <div className="p-8">
+                {!scannedBooking && !scanError ? (
+                  <div className="space-y-6">
+                    {/* The Scanner Viewport */}
+                    <div className="space-y-6">
+                      {/* The Container */}
+                      <div
+                        id="reader"
+                        className={`relative rounded-xl overflow-hidden border-2 border-dashed transition-all ${
+                          isScanning
+                            ? "border-blue-500 bg-black min-h-[300px]"
+                            : "border-gray-300 bg-gray-50 h-64"
+                        } flex flex-col items-center justify-center`}
+                      >
+                        {!isScanning && (
+                          <div className="text-center">
+                            <div className="bg-white p-4 rounded-full shadow-sm inline-block mb-4">
+                              <QrCode size={40} className="text-gray-400" />
+                            </div>
+                            <p className="text-gray-500 mb-4 font-medium px-4">
+                              Camera is ready
+                            </p>
+                            <button
+                              onClick={startCamera}
+                              className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 shadow-lg flex items-center gap-2 mx-auto"
+                            >
+                              <Plus size={20} /> Start Scanning
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg text-blue-700">
+                        <QrCode size={24} />
+                        <p className="text-sm">
+                          {isScanning
+                            ? "Align the user's QR code within the frame."
+                            : "Click 'Start Scanning' to verify a user's booking."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg text-blue-700">
+                      <QrCode size={24} />
+                      <p className="text-sm">
+                        Position the user's QR code within the frame to
+                        automatically detect booking details.
+                      </p>
+                    </div>
+                  </div>
+                ) : scannedBooking ? (
+                  /* SUCCESS STATE */
+                  <div className="text-center py-6 animate-in zoom-in duration-300">
+                    <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle2 size={40} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900">
+                      Valid Booking
+                    </h3>
+                    <p className="text-gray-500 mb-6">
+                      ID: {scannedBooking.id}
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-4 text-left mb-8">
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <span className="text-xs text-gray-500 block">
+                          User
+                        </span>
+                        <span className="font-bold">{scannedBooking.user}</span>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <span className="text-xs text-gray-500 block">
+                          Slot
+                        </span>
+                        <span className="font-bold text-blue-600">
+                          {scannedBooking.slot}
+                        </span>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-xl col-span-2">
+                        <span className="text-xs text-gray-500 block">
+                          Vehicle
+                        </span>
+                        <span className="font-bold">
+                          {scannedBooking.vehicle}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          setScannedBooking(null);
+                          setGateStatus("Closed");
+                        }}
+                        className="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-medium hover:bg-gray-50"
+                      >
+                        Done
+                      </button>
+                      <button
+                        onClick={() => {
+                          setGateStatus("Open");
+                          // Optional: Automatically close gate after 5 seconds
+                          setTimeout(() => setGateStatus("Closed"), 5000);
+                        }}
+                        className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 shadow-lg shadow-green-200"
+                      >
+                        Open Gate
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* ERROR STATE */
+                  <div className="text-center py-6">
+                    <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <AlertTriangle size={40} />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900">
+                      Invalid QR Code
+                    </h3>
+                    <p className="text-gray-500 mb-6">{scanError}</p>
+                    <button
+                      onClick={() => setScanError("")}
+                      className="w-full py-3 bg-gray-900 text-white rounded-xl font-medium"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* FEATURE 5: REVENUE MANAGEMENT */}
         {activeTab === "revenue" && (
@@ -258,38 +524,233 @@ const OwnerDashboard = () => {
           </div>
         )}
 
-        {/* FEATURE 6: ANALYTICS */}
+        {/* FEATURE 6: UPGRADED ANALYTICS - INDIAN RUPEE */}
         {activeTab === "analytics" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <h3 className="font-bold mb-6">Peak Hour Utilization</h3>
-              <div className="flex items-end gap-2 h-40">
-                {[20, 35, 50, 90, 100, 80, 40].map((h, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 bg-blue-500 rounded-t"
-                    style={{ height: `${h}%` }}
-                  />
-                ))}
+          <div className="space-y-8">
+            {/* Top Row: Quick Stats in ₹ */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {[
+                {
+                  label: "Total Revenue",
+                  value: "₹42,500",
+                  change: "+12%",
+                  icon: CreditCard,
+                  color: "text-emerald-600",
+                },
+                {
+                  label: "Avg. Ticket",
+                  value: "₹180",
+                  change: "-5%",
+                  icon: Clock,
+                  color: "text-blue-600",
+                },
+                {
+                  label: "Monthly Pass Users",
+                  value: "45",
+                  change: "+4",
+                  icon: ShieldCheck,
+                  color: "text-purple-600",
+                },
+                {
+                  label: "Active Alerts",
+                  value: "2",
+                  change: "Stable",
+                  icon: AlertTriangle,
+                  color: "text-orange-600",
+                },
+              ].map((stat, i) => (
+                <div
+                  key={i}
+                  className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm"
+                >
+                  <div className="flex justify-between items-start">
+                    <div
+                      className={`p-2 rounded-lg ${stat.color.replace("text", "bg")}/10`}
+                    >
+                      <stat.icon className={`${stat.color}`} size={20} />
+                    </div>
+                    <span className="text-[10px] font-bold bg-gray-100 px-2 py-0.5 rounded text-gray-500">
+                      {stat.change}
+                    </span>
+                  </div>
+                  <p className="text-gray-500 text-xs mt-3 font-medium">
+                    {stat.label}
+                  </p>
+                  <p className="text-xl font-bold text-slate-800">
+                    {stat.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Middle Row: Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* 1. Peak Utilization Chart */}
+              <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h3 className="font-bold text-slate-800">
+                      Occupancy Trends
+                    </h3>
+                    <p className="text-xs text-gray-400">
+                      Hourly traffic for today
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>{" "}
+                      Normal
+                    </span>
+                    <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                      <span className="w-2 h-2 bg-red-500 rounded-full"></span>{" "}
+                      Peak
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-end gap-3 h-48 px-2">
+                  {[15, 25, 40, 75, 95, 100, 90, 70, 50, 30, 20].map((h, i) => (
+                    <div
+                      key={i}
+                      className="flex-1 flex flex-col items-center gap-2 group"
+                    >
+                      <div
+                        className={`w-full rounded-t-sm transition-all relative ${h > 80 ? "bg-red-500" : "bg-blue-500 opacity-80 group-hover:opacity-100"}`}
+                        style={{ height: `${h}%` }}
+                      >
+                        <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap z-20">
+                          {h}% Full
+                        </div>
+                      </div>
+                      <span className="text-[9px] text-gray-400 font-medium">
+                        {i + 9} AM
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="flex justify-between mt-2 text-xs text-gray-400">
-                <span>8AM</span>
-                <span>12PM</span>
-                <span>4PM</span>
-                <span>8PM</span>
+
+              {/* 2. Revenue Breakdown by Vehicle Type */}
+              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                <h3 className="font-bold mb-6 text-slate-800">
+                  Revenue Breakdown
+                </h3>
+                <div className="space-y-5">
+                  {[
+                    {
+                      type: "4-Wheelers",
+                      amount: "₹28,400",
+                      perc: 60,
+                      color: "bg-blue-600",
+                    },
+                    {
+                      type: "2-Wheelers",
+                      amount: "₹9,200",
+                      perc: 25,
+                      color: "bg-indigo-400",
+                    },
+                    {
+                      type: "EV Charging",
+                      amount: "₹4,900",
+                      perc: 15,
+                      color: "bg-emerald-500",
+                    },
+                  ].map((item, i) => (
+                    <div key={i}>
+                      <div className="flex justify-between text-xs mb-1.5">
+                        <span className="font-semibold text-slate-700">
+                          {item.type}
+                        </span>
+                        <span className="font-bold text-slate-900">
+                          {item.amount}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
+                        <div
+                          className={`${item.color} h-full transition-all duration-1000`}
+                          style={{ width: `${item.perc}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-10 p-4 bg-slate-50 rounded-xl border border-slate-100 text-center">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">
+                    Estimated Monthly Earnings
+                  </p>
+                  <p className="text-3xl font-black text-slate-900 mt-1">
+                    ₹1,25,500
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="bg-blue-600 p-6 rounded-xl text-white shadow-lg">
-              <h3 className="font-bold mb-4 flex items-center gap-2">
-                <TrendingUp size={20} /> Dynamic Suggestion
-              </h3>
-              <p className="text-blue-100 text-sm leading-relaxed">
-                Occupancy has been consistently above 90% between 2:00 PM and
-                5:00 PM.
-              </p>
-              <button className="mt-4 bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-bold">
-                Increase Rates by 15%
-              </button>
+
+            {/* Bottom Row: AI Insights in INR context */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-slate-900 p-8 rounded-3xl text-white shadow-2xl relative overflow-hidden border border-slate-800">
+                <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-3 bg-blue-500/20 rounded-2xl border border-blue-500/30">
+                      <TrendingUp size={24} className="text-blue-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-xl">Revenue Optimizer</h3>
+                      <p className="text-blue-400 text-xs font-bold uppercase tracking-widest">
+                        AI Suggestion
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-slate-400 text-sm leading-relaxed mb-8">
+                    Current occupancy for{" "}
+                    <span className="text-white font-medium">4-Wheelers</span>{" "}
+                    is peaking 2 hours earlier than usual. Apply a{" "}
+                    <span className="text-emerald-400 font-bold">
+                      ₹20 surcharge
+                    </span>{" "}
+                    for instant bookings to maximize evening revenue.
+                  </p>
+                  <div className="flex gap-4">
+                    <button className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-600/20">
+                      Apply ₹20 Hike
+                    </button>
+                    <button className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-6 py-3 rounded-xl text-xs font-bold transition-all">
+                      Ignore
+                    </button>
+                  </div>
+                </div>
+                {/* Decorative elements */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl -mr-16 -mt-16" />
+              </div>
+
+              <div className="bg-white p-8 rounded-3xl border border-gray-200 flex flex-col justify-between shadow-sm">
+                <div>
+                  <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4 text-lg">
+                    <ShieldCheck size={22} className="text-emerald-500" />{" "}
+                    Operational Health
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                      <span className="text-sm text-gray-600">
+                        Entry Gate Sensors
+                      </span>
+                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
+                        Online
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                      <span className="text-sm text-gray-600">
+                        EV Charger Cluster
+                      </span>
+                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
+                        Online
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-6 flex items-center gap-3 text-emerald-600 font-bold text-xs bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
+                  <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping" />
+                  SYSTEMS FULLY OPERATIONAL
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -560,25 +1021,28 @@ const OwnerDashboard = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+        {/* --- TAB 1: GATE/SCANNER TAB --- */}
+        {activeTab === "gate" && (
+          <div className="space-y-6">
+            {/* Your Scanner UI and Currently in Lot Table go here */}
+          </div>
+        )}
 
-            {/* HISTORY TABLE (EXIT LOGS) */}
-            {gateHistory.length > 0 && (
+        {/* --- TAB 2: HISTORY TAB --- */}
+        {activeTab === "history" && (
+          <div className="space-y-6 animate-in fade-in duration-500">
+            {gateHistory.length > 0 ? (
               <div className="bg-slate-900 rounded-3xl overflow-hidden shadow-xl">
                 <div className="p-6 border-b border-slate-800">
                   <h4 className="font-bold text-white flex items-center gap-2">
-                    <History size={18} className="text-blue-400" /> Recent
-                    Activity History
+                    <History size={18} className="text-blue-400" /> Activity
+                    History
                   </h4>
                 </div>
                 <table className="w-full text-left text-slate-300 text-sm">
-                  <thead className="bg-slate-800/50 text-[10px] font-bold text-slate-500 uppercase">
-                    <tr>
-                      <th className="p-4">User</th>
-                      <th className="p-4">Entry Time</th>
-                      <th className="p-4">Exit Time</th>
-                      <th className="p-4 text-right">Duration</th>
-                    </tr>
-                  </thead>
+                  {/* ... your thead and tbody map code from earlier ... */}
                   <tbody className="divide-y divide-slate-800">
                     {gateHistory.map((log, i) => (
                       <tr key={i}>
@@ -595,37 +1059,185 @@ const OwnerDashboard = () => {
                   </tbody>
                 </table>
               </div>
+            ) : (
+              <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
+                <p className="text-gray-400">
+                  History is empty. Scan a QR and then click 'Exit' to see data
+                  here.
+                </p>
+              </div>
             )}
           </div>
         )}
-        {/* FEATURE 7: NOTIFICATIONS */}
+        {/* FEATURE 7: UPGRADED NOTIFICATIONS & FEEDBACK */}
         {activeTab === "notifications" && (
-          <div className="max-w-2xl space-y-4">
-            <div className="flex items-start gap-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <AlertTriangle className="text-amber-600" />
-              <div>
-                <p className="font-bold text-amber-900 text-sm">
-                  Slot Maintenance Required
-                </p>
-                <p className="text-amber-800 text-sm">
-                  Slot B-201 sensor is not responding.
-                </p>
+          <div className="max-w-4xl space-y-8 animate-in fade-in duration-500">
+            {/* Section 1: Critical System Alerts */}
+            <div>
+              <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <Bell size={20} className="text-blue-600" /> Operational Alerts
+              </h3>
+              <div className="grid gap-4">
+                {/* Maintenance Alert */}
+                <div className="flex items-start justify-between p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                  <div className="flex gap-4">
+                    <div className="p-2 bg-amber-100 rounded-lg">
+                      <AlertTriangle className="text-amber-600" size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-amber-900 text-sm">
+                        Hardware Fault: Slot B-201
+                      </p>
+                      <p className="text-amber-800 text-xs">
+                        Sensor not responding since 10:45 AM. Technician
+                        notified.
+                      </p>
+                      <span className="text-[10px] text-amber-600 font-bold mt-2 block uppercase tracking-wider">
+                        High Priority
+                      </span>
+                    </div>
+                  </div>
+                  <button className="text-xs font-bold text-amber-700 hover:underline">
+                    Mark Resolved
+                  </button>
+                </div>
+
+                {/* Payment Alert */}
+                <div className="flex items-start justify-between p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <div className="flex gap-4">
+                    <div className="p-2 bg-emerald-100 rounded-lg">
+                      <CreditCard className="text-emerald-600" size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-emerald-900 text-sm">
+                        Payout Dispatched
+                      </p>
+                      <p className="text-emerald-800 text-xs">
+                        ₹42,500.00 transferred to HDFC Bank ****9821.
+                      </p>
+                      <span className="text-[10px] text-emerald-600 font-bold mt-2 block uppercase tracking-wider">
+                        Reference: #PZN-8821
+                      </span>
+                    </div>
+                  </div>
+                  <button className="text-xs font-bold text-emerald-700 hover:underline">
+                    View Receipt
+                  </button>
+                </div>
+
+                {/* Overstay Alert */}
+                <div className="flex items-start justify-between p-4 bg-red-50 border border-red-200 rounded-xl">
+                  <div className="flex gap-4">
+                    <div className="p-2 bg-red-100 rounded-lg">
+                      <Clock className="text-red-600" size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-red-900 text-sm">
+                        Overstay Warning: MH-12-AB-1234
+                      </p>
+                      <p className="text-red-800 text-xs">
+                        Vehicle in Slot A-12 has exceeded booking time by 45
+                        mins.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <button className="bg-red-600 text-white px-3 py-1 rounded-lg text-[10px] font-bold">
+                      Apply Fine
+                    </button>
+                    <button className="text-[10px] text-gray-400 font-bold">
+                      Ignore
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="flex items-start gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <CreditCard className="text-blue-600" />
-              <div>
-                <p className="font-bold text-blue-900 text-sm">
-                  Payout Successful
-                </p>
-                <p className="text-blue-800 text-sm">
-                  $1,200.00 transferred to Bank Account ****1234.
-                </p>
+
+            {/* Section 2: User Feedback Feed */}
+            <div>
+              <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <MessageSquare size={20} className="text-purple-600" /> Recent
+                User Feedback
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  {
+                    user: "Rahul Sharma",
+                    rating: 5,
+                    comment:
+                      "Best parking experience in Indiranagar. The EV charger was super fast!",
+                    tag: "Compliment",
+                    color: "purple",
+                  },
+                  {
+                    user: "Ananya Iyer",
+                    rating: 3,
+                    comment:
+                      "The entrance is a bit narrow for SUVs. Had some trouble navigating.",
+                    tag: "Suggestion",
+                    color: "blue",
+                  },
+                  {
+                    user: "Vikram Singh",
+                    rating: 2,
+                    comment:
+                      "The floor was a bit muddy near Slot C-5. Needs cleaning.",
+                    tag: "Issue",
+                    color: "amber",
+                  },
+                  {
+                    user: "Priya K.",
+                    rating: 5,
+                    comment:
+                      "Automated gate works like magic. Very secure feel.",
+                    tag: "Compliment",
+                    color: "purple",
+                  },
+                ].map((feedback, i) => (
+                  <div
+                    key={i}
+                    className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:border-purple-200 transition-colors"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">
+                          {feedback.user}
+                        </p>
+                        <div className="flex gap-0.5 text-amber-400 mt-0.5">
+                          {[...Array(5)].map((_, star) => (
+                            <Star
+                              key={star}
+                              size={10}
+                              fill={
+                                star < feedback.rating ? "currentColor" : "none"
+                              }
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[9px] font-bold uppercase px-2 py-1 rounded bg-${feedback.color}-50 text-${feedback.color}-600`}
+                      >
+                        {feedback.tag}
+                      </span>
+                    </div>
+                    <p className="text-gray-600 text-xs italic leading-relaxed">
+                      "{feedback.comment}"
+                    </p>
+                    <div className="mt-4 pt-4 border-t border-gray-50 flex justify-between items-center">
+                      <span className="text-[10px] text-gray-400">
+                        2 hours ago
+                      </span>
+                      <button className="text-xs font-bold text-purple-600 hover:text-purple-700">
+                        Reply
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         )}
-
         {/* FEATURE 2: LOT MANAGEMENT (Add/Edit Slots) */}
         {activeTab === "lots" && (
           <div className="space-y-6 animate-in fade-in duration-500">
