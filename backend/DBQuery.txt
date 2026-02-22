@@ -1,0 +1,4 @@
+before run the backend code u must run the following query
+
+CREATE DATABASE parkzen
+
