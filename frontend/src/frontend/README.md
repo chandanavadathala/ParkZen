@@ -1,1 +1,0 @@
-frontend for project structure.
