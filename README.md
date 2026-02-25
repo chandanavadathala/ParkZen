@@ -1,0 +1,3 @@
+# ParkZen – Stress-Free Parking Experience
+
+ParkZen is a smart parking management system that provides vehicle-type-based slot allocation, real-time availability, and peak-time reservation to reduce parking confusion and congestion.
