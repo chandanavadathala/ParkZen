@@ -61,6 +61,10 @@ export default function UserDashboard() {
   const [placeSlots, setPlaceSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [userCoords, setUserCoords] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [paymentStep, setPaymentStep] = useState("selection"); // 'selection', 'gateway', 'processing'
+  const [upiId, setUpiId] = useState("");
   // Add this inside UserDashboard, with other useState hooks
   const [imageModal, setImageModal] = useState({
     open: false,
@@ -190,33 +194,40 @@ export default function UserDashboard() {
 
   // ===== CONFIRM BOOKING WITH PAYMENT =====
   const handleConfirmBookingWithPayment = () => {
-    const rate =
-      places[selectedPlace].rate * (selectedSlotType === "Premium" ? 1.2 : 1);
-    const entryTime = new Date().toLocaleTimeString();
+    // Start the loading state
+    setIsProcessing(true);
 
-    const newTicket = {
-      bookingId: "BK" + Math.floor(Math.random() * 1000),
-      place: selectedPlace,
-      slot: selectedSlot,
-      slotType: selectedSlotType,
-      entryTime,
-      payment: selectedPayment,
-      amount: rate,
-    };
+    // Simulate a network delay (like a real payment gateway)
+    setTimeout(() => {
+      const rate = Math.round(
+        places[selectedPlace].rate * (selectedSlotType === "Premium" ? 1.2 : 1),
+      );
+      const entryTime = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
 
-    setTicket(newTicket);
-
-    setBookings((prev) => [
-      ...prev,
-      {
-        id: newTicket.bookingId,
-        slot: `Slot ${selectedSlot} (${selectedSlotType})`,
-        start: entryTime,
-        end: "—",
-        status: "Active",
+      const newTicket = {
+        bookingId: "PZ" + Math.floor(1000 + Math.random() * 9000),
+        place: selectedPlace,
+        slot: selectedSlot,
+        slotType: selectedSlotType,
+        entryTime,
+        payment: selectedPayment, // This will show 'UPI', 'Card', etc.
         amount: rate,
-      },
-    ]);
+      };
+
+      // Update states
+      setTicket(newTicket);
+      setTotalBookings((prev) => prev + 1);
+      setAmountSpent((prev) => prev + rate);
+
+      // Stop loading
+      setIsProcessing(false);
+
+      // Clear selection so the summary modal disappears
+      setSelectedSlot(null);
+    }, 2000); // 2-second delay
   };
 
   // ===== STATUS COLORS =====
@@ -230,6 +241,40 @@ export default function UserDashboard() {
     if (status === "Active") return "bg-emerald-100 text-emerald-700";
     if (status === "Completed") return "bg-blue-100 text-blue-700";
     return "bg-red-100 text-red-700";
+  };
+  const handlePaymentWorkflow = () => {
+    // 1. Move to Processing Screen
+    setPaymentStep("processing");
+
+    // 2. Simulate the bank/UPI "Handshake" (3 seconds)
+    setTimeout(() => {
+      const rate = Math.round(
+        places[selectedPlace].rate * (selectedSlotType === "Premium" ? 1.2 : 1),
+      );
+      const entryTime = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const newTicket = {
+        bookingId: "PZ" + Math.floor(1000 + Math.random() * 9000),
+        place: selectedPlace,
+        slot: selectedSlot,
+        slotType: selectedSlotType,
+        entryTime,
+        payment: selectedPayment,
+        amount: rate,
+      };
+
+      // 3. Finalize everything
+      setTicket(newTicket);
+      setTotalBookings((prev) => prev + 1);
+      setAmountSpent((prev) => prev + rate);
+
+      // Reset states so UI shows the Ticket
+      setPaymentStep("selection");
+      setIsConfirming(false);
+    }, 3000);
   };
 
   return (
@@ -597,13 +642,17 @@ export default function UserDashboard() {
               })}
             </div>
 
-            {selectedSlot && (
+            {/* Change your logic to only show if a slot is picked AND we aren't already confirming or finished */}
+            {selectedSlot && !isConfirming && !ticket && (
               <div className="mt-8 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center justify-between animate-in zoom-in-95">
                 <p className="text-emerald-800 text-sm font-medium">
                   Ready to park in{" "}
                   <span className="font-black">Slot {selectedSlot}</span>?
                 </p>
-                <button className="bg-emerald-600 text-white px-6 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors">
+                <button
+                  onClick={() => setIsConfirming(true)} // This "unlocks" the summary
+                  className="bg-emerald-600 text-white px-6 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors"
+                >
                   Confirm Spot
                 </button>
               </div>
@@ -611,7 +660,7 @@ export default function UserDashboard() {
           </div>
         )}
         {/* ===== PARKZEN BOOKING MODAL ===== */}
-        {selectedSlot && !ticket && (
+        {isConfirming && !ticket && (
           <motion.div
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -631,6 +680,12 @@ export default function UserDashboard() {
                 <h2 className="text-2xl font-black text-slate-800 tracking-tight">
                   Booking Summary
                 </h2>
+                <button
+                  onClick={() => setIsConfirming(false)}
+                  className="text-slate-400"
+                >
+                  ✕
+                </button>
                 <div className="flex items-center justify-center gap-2 mt-2">
                   <span className="bg-slate-100 text-slate-600 text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-tighter">
                     {selectedPlace}
@@ -667,7 +722,7 @@ export default function UserDashboard() {
                 </div>
 
                 {/* Payment Method Selection */}
-                <div className="group bg-slate-50 border border-slate-100 rounded-2xl p-4 transition-all focus-within:ring-4 focus-within:ring-emerald-500/10 focus-within:border-emerald-200">
+                <div className="group bg-slate-50 border border-slate-100 rounded-2xl p-4 ...">
                   <label className="flex items-center gap-2 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                     <CreditCard size={14} className="text-emerald-500" />
                     Payment Method
@@ -678,19 +733,36 @@ export default function UserDashboard() {
                       value={selectedPayment}
                       onChange={(e) => setSelectedPayment(e.target.value)}
                     >
-                      <option value="Wallet">ParkZen Wallet</option>
+                      <option value="Wallet">ParkZen Wallet (Bal: ₹450)</option>
                       <option value="UPI">UPI (Google Pay/PhonePe)</option>
                       <option value="Card">Credit / Debit Card</option>
-                      <option value="Netbanking">Netbanking</option>
                     </select>
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <ChevronRight
-                        size={16}
-                        className="rotate-90 text-slate-400"
-                      />
-                    </div>
+                    {/* ... Chevron icon ... */}
                   </div>
                 </div>
+
+                {/* The Action Button */}
+                <motion.button
+                  onClick={handleConfirmBookingWithPayment}
+                  disabled={isProcessing}
+                  className={`w-full py-4 rounded-2xl font-black flex items-center justify-center gap-3 transition-all ${
+                    isProcessing
+                      ? "bg-slate-400 cursor-wait"
+                      : "bg-slate-900 hover:bg-slate-800 text-white shadow-xl"
+                  }`}
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Processing {selectedPayment}...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard size={20} className="text-emerald-400" />
+                      Pay via {selectedPayment}
+                    </>
+                  )}
+                </motion.button>
 
                 {/* Pricing Summary Visualization */}
                 <div className="bg-emerald-600 rounded-2xl p-5 text-white shadow-xl shadow-emerald-200 mt-6 relative overflow-hidden">

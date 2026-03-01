@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
+import AddSlotModal from "../components/AddSlotModal";
+import BookingLogs from "../components/BookingLogs";
+import RevenueManagement from "../components/RevenueManagement";
+
 import {
   LayoutDashboard,
   Car,
@@ -86,8 +90,10 @@ const OwnerDashboard = () => {
     },
   ]);
   // --- NEW SCANNER STATE ---
+  const [showAddSlot, setShowAddSlot] = useState(false);
   const [scannedBooking, setScannedBooking] = useState(null);
   const [scanError, setScanError] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
   useEffect(() => {
     // Only initialize scanner if the active tab is "scan"
     if (activeTab === "scan") {
@@ -229,6 +235,15 @@ const OwnerDashboard = () => {
       <span className="font-medium">{label}</span>
     </button>
   );
+  const handleAddNewSlot = (newSlotData) => {
+    // This adds the new slot to your existing list
+    setSlots([...slots, newSlotData]);
+  };
+  const handleMarkAsPaid = (bookingId) => {
+    setBookings((prev) =>
+      prev.map((b) => (b.id === bookingId ? { ...b, payment: "Paid" } : b)),
+    );
+  };
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-gray-900">
@@ -249,7 +264,7 @@ const OwnerDashboard = () => {
         <SidebarItem id="gate" icon={QrCode} label="Entry / Exit" />
         <SidebarItem id="revenue" icon={CreditCard} label="Payments" />
         <SidebarItem id="analytics" icon={BarChart3} label="Analytics" />
-        <SidebarItem id="history" icon={History} label="History" />
+
         <SidebarItem id="notifications" icon={Bell} label="Alerts" />
       </aside>
 
@@ -267,9 +282,6 @@ const OwnerDashboard = () => {
               <span className="text-xs text-gray-500 block">Occupancy</span>
               <span className="font-bold text-blue-600">72%</span>
             </div>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700">
-              <Plus size={18} /> New Booking
-            </button>
           </div>
         </header>
 
@@ -470,59 +482,7 @@ const OwnerDashboard = () => {
         )}
 
         {/* FEATURE 5: REVENUE MANAGEMENT */}
-        {activeTab === "revenue" && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                <h3 className="text-gray-500 text-sm mb-1">
-                  Total Revenue (Monthly)
-                </h3>
-                <p className="text-3xl font-bold text-slate-900">$12,450.00</p>
-                <span className="text-green-500 text-xs flex items-center gap-1 mt-2">
-                  <TrendingUp size={12} /> +12% from last month
-                </span>
-              </div>
-              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm text-center flex flex-col justify-center">
-                <button className="bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800">
-                  Request Payout
-                </button>
-                <p className="text-xs text-gray-400 mt-2">
-                  Available: $3,210.00
-                </p>
-              </div>
-            </div>
-            <table className="w-full bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="text-left p-4 text-sm font-semibold">User</th>
-                  <th className="text-left p-4 text-sm font-semibold">
-                    Amount
-                  </th>
-                  <th className="text-left p-4 text-sm font-semibold">
-                    Method
-                  </th>
-                  <th className="text-left p-4 text-sm font-semibold">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {bookings.map((b, i) => (
-                  <tr key={i}>
-                    <td className="p-4 text-sm">{b.user}</td>
-                    <td className="p-4 text-sm font-bold">$25.00</td>
-                    <td className="p-4 text-sm">Credit Card</td>
-                    <td className="p-4">
-                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs">
-                        Completed
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {activeTab === "revenue" && <RevenueManagement bookings={bookings} />}
 
         {/* FEATURE 6: UPGRADED ANALYTICS - INDIAN RUPEE */}
         {activeTab === "analytics" && (
@@ -756,152 +716,7 @@ const OwnerDashboard = () => {
         )}
         {/* FEATURE 3: BOOKING MONITORING (Categorized) */}
         {activeTab === "bookings" && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            {/* HEADER & SEARCH */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
-              <div>
-                <h3 className="text-xl font-bold">Booking Logs</h3>
-                <p className="text-sm text-gray-500 font-medium">
-                  Monitoring {bookings.length} active sessions
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <div className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100">
-                  Unpaid:{" "}
-                  {bookings.filter((b) => b.payment === "Pending").length}
-                </div>
-                <div className="px-4 py-2 bg-green-50 text-green-600 rounded-xl text-xs font-bold border border-green-100">
-                  Paid: {bookings.filter((b) => b.payment === "Paid").length}
-                </div>
-              </div>
-            </div>
-
-            {/* SECTION 1: UNPAID BOOKINGS (Immediate Action Required) */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 px-2">
-                <AlertTriangle size={18} className="text-amber-500" />
-                <h4 className="font-black text-slate-800 uppercase tracking-tighter">
-                  Payment Pending / Post-Paid
-                </h4>
-              </div>
-
-              <div className="bg-white rounded-3xl border-2 border-amber-100 shadow-sm overflow-hidden">
-                <table className="w-full text-left">
-                  <thead className="bg-amber-50/50 text-[10px] font-bold text-amber-700 uppercase tracking-widest">
-                    <tr>
-                      <th className="p-4">User Details</th>
-                      <th className="p-4">Slot</th>
-                      <th className="p-4">Vehicle No.</th>
-                      <th className="p-4">Time Window</th>
-                      <th className="p-4">Amount</th>
-                      <th className="p-4 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {bookings
-                      .filter((b) => b.payment === "Pending")
-                      .map((booking, idx) => (
-                        <tr
-                          key={idx}
-                          className="hover:bg-amber-50/30 transition"
-                        >
-                          <td className="p-4">
-                            <p className="font-bold text-slate-900">
-                              {booking.user}
-                            </p>
-                            <p className="text-[10px] text-slate-400">
-                              ID: {booking.id}
-                            </p>
-                          </td>
-                          <td className="p-4">
-                            <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded font-bold text-xs">
-                              {booking.slot}
-                            </span>
-                          </td>
-                          <td className="p-4 font-mono text-xs font-bold text-slate-600">
-                            {booking.vehicle}
-                          </td>
-                          <td className="p-4 text-xs text-slate-500">
-                            {booking.time}
-                          </td>
-                          <td className="p-4 font-black text-red-600">
-                            $25.00
-                          </td>
-                          <td className="p-4 text-right">
-                            <button className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-800">
-                              Mark as Paid
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-                {bookings.filter((b) => b.payment === "Pending").length ===
-                  0 && (
-                  <p className="p-8 text-center text-sm text-gray-400 italic">
-                    No pending payments found.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* SECTION 2: PAID BOOKINGS (Confirmed Access) */}
-            <div className="space-y-4 pt-4">
-              <div className="flex items-center gap-2 px-2">
-                <CheckCircle2 size={18} className="text-green-500" />
-                <h4 className="font-black text-slate-800 uppercase tracking-tighter">
-                  Verified & Paid Bookings
-                </h4>
-              </div>
-
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden opacity-90">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    <tr>
-                      <th className="p-4">User Details</th>
-                      <th className="p-4">Slot</th>
-                      <th className="p-4">Vehicle No.</th>
-                      <th className="p-4">Time Window</th>
-                      <th className="p-4">Reference</th>
-                      <th className="p-4 text-right">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {bookings
-                      .filter((b) => b.payment === "Paid")
-                      .map((booking, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50 transition">
-                          <td className="p-4">
-                            <p className="font-bold text-slate-700">
-                              {booking.user}
-                            </p>
-                          </td>
-                          <td className="p-4">
-                            <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded font-bold text-xs">
-                              {booking.slot}
-                            </span>
-                          </td>
-                          <td className="p-4 font-mono text-xs text-slate-500">
-                            {booking.vehicle}
-                          </td>
-                          <td className="p-4 text-xs text-slate-500">
-                            {booking.time}
-                          </td>
-                          <td className="p-4 text-[10px] font-mono text-slate-400">
-                            {booking.id}
-                          </td>
-                          <td className="p-4 text-right">
-                            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">
-                              Paid & Confirmed
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <BookingLogs bookings={bookings} onMarkAsPaid={handleMarkAsPaid} />
         )}
         {/* FEATURE 4: ENTRY & EXIT CONTROL */}
         {activeTab === "gate" && (
@@ -1030,45 +845,6 @@ const OwnerDashboard = () => {
           </div>
         )}
 
-        {/* --- TAB 2: HISTORY TAB --- */}
-        {activeTab === "history" && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            {gateHistory.length > 0 ? (
-              <div className="bg-slate-900 rounded-3xl overflow-hidden shadow-xl">
-                <div className="p-6 border-b border-slate-800">
-                  <h4 className="font-bold text-white flex items-center gap-2">
-                    <History size={18} className="text-blue-400" /> Activity
-                    History
-                  </h4>
-                </div>
-                <table className="w-full text-left text-slate-300 text-sm">
-                  {/* ... your thead and tbody map code from earlier ... */}
-                  <tbody className="divide-y divide-slate-800">
-                    {gateHistory.map((log, i) => (
-                      <tr key={i}>
-                        <td className="p-4 text-white font-medium">
-                          {log.user}
-                        </td>
-                        <td className="p-4">{log.entry}</td>
-                        <td className="p-4 text-green-400">{log.exit}</td>
-                        <td className="p-4 text-right text-slate-500 italic">
-                          Completed
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
-                <p className="text-gray-400">
-                  History is empty. Scan a QR and then click 'Exit' to see data
-                  here.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
         {/* FEATURE 7: UPGRADED NOTIFICATIONS & FEEDBACK */}
         {activeTab === "notifications" && (
           <div className="max-w-4xl space-y-8 animate-in fade-in duration-500">
@@ -1248,7 +1024,10 @@ const OwnerDashboard = () => {
                   Manage total capacity and slot properties
                 </p>
               </div>
-              <button className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-700 transition shadow-lg shadow-blue-200">
+              <button
+                onClick={() => setShowAddSlot(true)}
+                className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-700 transition shadow-lg shadow-blue-200"
+              >
                 <Plus size={20} /> Add New Slot
               </button>
             </div>
@@ -1284,6 +1063,25 @@ const OwnerDashboard = () => {
                     Update Global Rates
                   </button>
                 </div>
+              </div>
+              {showAddSlot && (
+                <AddSlotModal
+                  onClose={() => setShowAddSlot(false)}
+                  onAdd={(slot) => setSlots((prev) => [...prev, slot])}
+                />
+              )}
+              <div className="grid grid-cols-3 gap-4">
+                {slots.map((slot) => (
+                  <div
+                    key={slot.id}
+                    className="p-4 border rounded-xl shadow-sm"
+                  >
+                    <h4 className="font-bold">{slot.name}</h4>
+                    <p className="text-sm text-slate-500">
+                      {slot.size} - ₹{slot.rate}/hr
+                    </p>
+                  </div>
+                ))}
               </div>
 
               {/* Slot Type Summary */}
