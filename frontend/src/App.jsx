@@ -22,7 +22,7 @@ function App() {
 
         {/* 👤 USER Dashboard */}
         <Route
-          path="/dashboard"
+          path="user/dashboard"
           element={
             <ProtectedRoute allowedRoles={["user"]}>
               <Dashboard />

@@ -1,4 +1,4 @@
 before run the backend code u must run the following query
 
-CREATE DATABASE parkzen
+CREATE DATABASE parkzen_db_main
 
