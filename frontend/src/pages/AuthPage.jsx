@@ -1,17 +1,55 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../api/api";
+import { saveToken } from "../api/authService";
 
 export default function AuthPage() {
+
   const [mode, setMode] = useState("login");
   const [role, setRole] = useState("user");
+
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [vehicleNumber, setVehicleNumber] = useState("");
+
+  // Owner Parking Details
+  const [parkingName, setParkingName] = useState("");
+  const [parkingAddress, setParkingAddress] = useState("");
+
+  // Location (hidden fields)
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  // 📍 Get current location
+  const getCurrentLocation = () => {
+
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+
+        setLatitude(position.coords.latitude);
+        setLongitude(position.coords.longitude);
+
+        alert("Location captured successfully");
+
+      },
+      () => {
+        alert("Unable to get location");
+      }
+    );
+  };
+
+
+  const handleSubmit = async (e) => {
+
     e.preventDefault();
 
     if (!mobile || mobile.length !== 10) {
@@ -24,35 +62,104 @@ export default function AuthPage() {
       return;
     }
 
-    if (mode === "signup" && !name.trim()) {
-      alert("Enter your full name");
-      return;
-    }
+    try {
 
-    if (mode === "signup" && role === "user" && !vehicleNumber.trim()) {
-      alert("Enter your vehicle number");
-      return;
-    }
+      // ================= LOGIN =================
 
-    // Normal login for User/Owner
-    if (mode === "login" && role !== "admin") {
-      navigate("/verify-otp", {
-        state: { name, mobile, email, password, role, ...(role==="user" && {vehicleNumber}) },
-      });
-      return;
-    }
+      if (mode === "login") {
 
-    // Signup
-    if (mode === "signup") {
-      navigate("/verify-otp", {
-        state: { name, mobile, email, password, role, ...(role==="user" && {vehicleNumber}) },
-      });
-      return;
+        let endpoint = "";
+
+        if (role === "user") endpoint = "/users/login";
+        else if (role === "owner") endpoint = "/owners/login";
+        else endpoint = "/admins/login";
+
+        const res = await api.post(endpoint, {
+          login: mobile || email,
+          password: password,
+        });
+
+        saveToken(res.data);
+
+        localStorage.setItem("role", role);
+
+        if (role === "user") navigate("/user/dashboard");
+        else if (role === "owner") navigate("/owner/dashboard");
+        else navigate("/admin/dashboard");
+
+        return;
+      }
+
+      // ================= SIGNUP =================
+
+      if (mode === "signup") {
+
+        if (!name.trim()) {
+          alert("Enter your full name");
+          return;
+        }
+
+        if (role === "user" && !vehicleNumber.trim()) {
+          alert("Enter your vehicle number");
+          return;
+        }
+
+        if (role === "owner") {
+
+          if (!parkingName || !parkingAddress) {
+            alert("Please enter parking details");
+            return;
+          }
+
+          if (!latitude || !longitude) {
+            alert("Please click 'Get Current Location'");
+            return;
+          }
+        }
+
+        const endpoint =
+          role === "user" ? "/users/register" : "/owners/register";
+
+        const payload =
+          role === "user"
+            ? {
+                name,
+                mobile,
+                email,
+                password,
+                vehicleNumber
+              }
+            : {
+                ownerName: name,
+                mobile,
+                email,
+                password,
+                parkingName,
+                parkingAddress,
+                latitude,
+                longitude
+              };
+
+        await api.post(endpoint, payload);
+
+        alert("Registration Successful! Please login.");
+
+        setMode("login");
+        setPassword("");
+
+        return;
+      }
+
+    } catch (error) {
+
+      alert(error.response?.data || "Something went wrong");
     }
   };
 
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-slate-100 font-sans">
+
       <div className="grid w-full max-w-4xl overflow-hidden bg-white shadow-xl rounded-3xl md:grid-cols-2">
 
         {/* Left Branding */}
@@ -66,10 +173,9 @@ export default function AuthPage() {
 
         {/* Right Form */}
         <div className="p-8 md:p-12">
+
           <h3 className="text-2xl font-semibold mb-2">
-            {mode === "login" && role === "admin"
-              ? "Admin Login"
-              : mode === "login"
+            {mode === "login"
               ? "Welcome Back"
               : "Create Account"}
           </h3>
@@ -82,36 +188,39 @@ export default function AuthPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
 
-            {/* ROLE SELECTION (Signup only, moved to top) */}
+            {/* ROLE SELECTION */}
             {mode === "signup" && (
+
               <div className="mb-4">
+
                 <label className="block text-sm font-medium text-gray-600 mb-2">
                   Register As
                 </label>
+
                 <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { id: "user", label: "User" },
-                    { id: "owner", label: "Owner" },
-                  ].map((r) => (
+
+                  {[{ id: "user", label: "User" }, { id: "owner", label: "Owner" }].map((r) => (
+
                     <button
                       key={r.id}
                       type="button"
                       onClick={() => setRole(r.id)}
                       className={`py-3 rounded-xl border text-sm font-medium transition
-                        ${
-                          role === r.id
-                            ? "bg-emerald-500 text-white border-emerald-500"
-                            : "bg-white text-gray-700 hover:border-emerald-400"
+                        ${role === r.id
+                          ? "bg-emerald-500 text-white border-emerald-500"
+                          : "bg-white text-gray-700 hover:border-emerald-400"
                         }`}
                     >
                       {r.label}
                     </button>
                   ))}
+
                 </div>
+
               </div>
             )}
 
-            {/* FULL NAME (Signup only) */}
+            {/* FULL NAME */}
             {mode === "signup" && (
               <input
                 type="text"
@@ -122,7 +231,7 @@ export default function AuthPage() {
               />
             )}
 
-            {/* VEHICLE NUMBER (Signup only for User) */}
+            {/* USER VEHICLE NUMBER */}
             {mode === "signup" && role === "user" && (
               <input
                 type="text"
@@ -133,7 +242,36 @@ export default function AuthPage() {
               />
             )}
 
-            {/* MOBILE NUMBER */}
+            {/* OWNER PARKING DETAILS */}
+           {mode === "signup" && role === "owner" && (
+  <>
+    <input
+      type="text"
+      placeholder="Parking Name"
+      value={parkingName}
+      onChange={(e) => setParkingName(e.target.value)}
+      className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-400 outline-none"
+    />
+
+    <input
+      type="text"
+      placeholder="Parking Address"
+      value={parkingAddress}
+      onChange={(e) => setParkingAddress(e.target.value)}
+      className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-400 outline-none"
+    />
+
+    <button
+      type="button"
+      onClick={getCurrentLocation}
+      className="w-full py-3 text-white bg-emerald-500 rounded-xl hover:bg-emerald-600 transition"
+            >
+      📍 Get Current Location
+    </button>
+  </>
+)}
+
+            {/* MOBILE */}
             <input
               type="text"
               placeholder="Mobile Number"
@@ -146,46 +284,21 @@ export default function AuthPage() {
             {/* EMAIL */}
             <input
               type="email"
-              placeholder="Email address "
+              placeholder="Email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-400 outline-none"
             />
 
-            {/* PASSWORD (Login & Signup) */}
-            {(mode === "signup" || mode === "login") && (
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-400 outline-none"
-                required
-              />
-            )}
-
-            {/* ADMIN LOGIN BUTTON (Login only) */}
-            {mode === "login" && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (!mobile || mobile.length !== 10) {
-                    alert("Enter a valid 10-digit mobile number");
-                    return;
-                  }
-                  if (!password) {
-                    alert("Enter your password");
-                    return;
-                  }
-                  navigate("/admin/dashboard", {
-                    state: { mobile, password, role: "admin" },
-                  });
-                }}
-                className="text-sm text-red-500 hover:underline mt-2"
-              >
-                Admin Login
-              </button>
-            )}
+            {/* PASSWORD */}
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-400 outline-none"
+              required
+            />
 
             <button
               type="submit"
@@ -193,18 +306,19 @@ export default function AuthPage() {
             >
               {mode === "login" ? "Continue" : "Register & Continue"}
             </button>
+
           </form>
 
-          {/* SWITCH MODE */}
           <div className="text-center text-sm mt-6 text-gray-600">
             {mode === "login"
               ? "Don’t have an account?"
               : "Already have an account?"}
+
             <button
               type="button"
               onClick={() => {
                 setMode(mode === "login" ? "signup" : "login");
-                setRole("user"); // Reset role when switching
+                setRole("user");
               }}
               className="ml-1 text-emerald-600 font-medium hover:underline"
             >
@@ -212,9 +326,6 @@ export default function AuthPage() {
             </button>
           </div>
 
-          <p className="text-xs text-center text-gray-400 mt-4">
-            By continuing, you agree to our Terms & Privacy Policy
-          </p>
         </div>
       </div>
     </div>

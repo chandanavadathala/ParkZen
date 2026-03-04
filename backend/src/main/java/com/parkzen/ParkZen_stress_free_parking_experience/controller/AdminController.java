@@ -1,6 +1,7 @@
 package com.parkzen.ParkZen_stress_free_parking_experience.controller;
 
 
+import com.parkzen.ParkZen_stress_free_parking_experience.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +17,8 @@ public class AdminController {
 
     @Autowired
     private AdminService service;
-
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Admin admin) {
@@ -33,7 +35,8 @@ public class AdminController {
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
             Admin admin = service.login(request.getLogin(), request.getPassword());
-            return new ResponseEntity<>(admin, HttpStatus.OK);
+            String token = jwtUtil.generateToken(admin.getEmail(), "ADMIN");
+            return ResponseEntity.ok(token);
 
         } catch (RuntimeException e) {
 
