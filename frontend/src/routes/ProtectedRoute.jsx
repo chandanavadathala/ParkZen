@@ -1,22 +1,23 @@
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 
 const ProtectedRoute = ({ allowedRoles, children }) => {
-  const { user } = useAuth();
 
-  // ✅ If not logged in → go to Auth page
-  if (!user || !user.isAuthenticated) {
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+
+  // If no token → go to login
+  if (!token) {
     return <Navigate to="/login" replace />;
   }
 
-  // ✅ If role not allowed → redirect to correct dashboard
-  if (!allowedRoles.includes(user.role)) {
-    if (user.role === "admin") return <Navigate to="/admin" replace />;
-    if (user.role === "owner") return <Navigate to="/owner" replace />;
-    if (user.role === "user") return <Navigate to="/dashboard" replace />;
+  // If role not allowed
+  if (allowedRoles && !allowedRoles.includes(role)) {
+
+    if (role === "admin") return <Navigate to="/admin/dashboard" replace />;
+    if (role === "owner") return <Navigate to="/owner/dashboard" replace />;
+    if (role === "user") return <Navigate to="/user/dashboard" replace />;
   }
 
-  // ✅ If allowed → show page
   return children;
 };
 
