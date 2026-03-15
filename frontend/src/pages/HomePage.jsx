@@ -1,4 +1,5 @@
 import React from "react";
+import Chatbot from "../components/Chatbot";
 import { Search, User } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -10,16 +11,9 @@ export default function HomePage() {
         <h1 className="text-2xl font-semibold text-emerald-600">ParkZen</h1>
 
         <nav className="flex items-center gap-6 text-sm font-medium">
-          <a href="#dashboard" className="hover:text-emerald-600">
-            Dashboard
-          </a>
           <a href="#help" className="hover:text-emerald-600 transition">
             Help
           </a>
-          <a href="#search" className="hover:text-emerald-600">
-            Search
-          </a>
-
           <Link
             to="/login"
             className="flex items-center gap-2 px-4 py-2 text-white bg-emerald-500 rounded-full hover:bg-emerald-600 transition"
@@ -275,6 +269,7 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+      <Chatbot />
     </div>
   );
 }
