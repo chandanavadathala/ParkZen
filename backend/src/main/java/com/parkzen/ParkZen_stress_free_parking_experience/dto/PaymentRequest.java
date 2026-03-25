@@ -5,10 +5,12 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class LoginRequest {
+public class PaymentRequest {
 
-    private String emailOrMobile;
+    private Long bookingId;
 
-    private String password;
+    private Double amount;
+
+    private String paymentMethod;
 
 }
