@@ -1,29 +1,30 @@
-package com.parkzen.ParkZen_stress_free_parking_experience.entity;
+package com.parkzen.Parkzen_stress_free_parking_experience.entity;
 
+import com.parkzen.Parkzen_stress_free_parking_experience.entity.enums.PaymentStatus;
 import jakarta.persistence.*;
-import lombok.Data;
-import java.time.LocalDateTime;
+import lombok.*;
 
 @Entity
-@Data
 @Table(name = "payments")
-public class Payment {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Payment extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private Double amount;
+
+    private String paymentMethod;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus paymentStatus;
+
     @OneToOne
     @JoinColumn(name = "booking_id")
     private Booking booking;
-
-    private double amount;
-
-    private String paymentMethod;   // UPI, Card, Cash
-
-    private String paymentStatus;   // Success, Failed
-
-    private String transactionId;
-
-    private LocalDateTime paymentTime;
 }

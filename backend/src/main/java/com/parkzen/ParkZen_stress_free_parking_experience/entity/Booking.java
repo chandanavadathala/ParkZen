@@ -1,17 +1,36 @@
-package com.parkzen.ParkZen_stress_free_parking_experience.entity;
+package com.parkzen.Parkzen_stress_free_parking_experience.entity;
 
+import com.parkzen.Parkzen_stress_free_parking_experience.entity.enums.BookingStatus;
+import com.parkzen.Parkzen_stress_free_parking_experience.entity.enums.PaymentStatus;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Data
 @Table(name = "bookings")
-public class Booking {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Booking extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    private String vehicleNumber;
+
+    private LocalDateTime startTime;
+
+    private LocalDateTime endTime;
+
+    @Enumerated(EnumType.STRING)
+    private BookingStatus bookingStatus;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus paymentStatus;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
@@ -19,14 +38,5 @@ public class Booking {
 
     @ManyToOne
     @JoinColumn(name = "slot_id")
-    private ParkingSlot slot;
-
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
-
-    private String vehicleNumber;
-
-    private String bookingStatus; // Booked, Active, Completed
-
-    private LocalDateTime createdAt;
+    private Slot slot;
 }

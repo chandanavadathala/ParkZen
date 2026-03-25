@@ -1,41 +1,42 @@
-package com.parkzen.ParkZen_stress_free_parking_experience.entity;
+package com.parkzen.Parkzen_stress_free_parking_experience.entity;
 
+
+
+import com.parkzen.Parkzen_stress_free_parking_experience.entity.enums.Role;
 import jakarta.persistence.*;
-import lombok.Data;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
-import java.time.LocalDateTime;
+import lombok.*;
 
 @Entity
-@Data
-@Table(name = "users")
+@Table(
+        name = "users",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = "email"),
+                @UniqueConstraint(columnNames = "mobile")
+        }
+
+)
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name;
+    private String fullName;
 
-    @Column(unique = true, nullable = false)
-    private String email;
-
-    @Column(unique = true, nullable = false)
     private String mobile;
 
-    @Column(nullable = false)
+    private String email;
+
     private String password;
 
     private String vehicleNumber;
 
-    // Automatically set when record is created
-    @CreationTimestamp
-    @Column(updatable = false)
-    private LocalDateTime createdAt;
+    @Enumerated(EnumType.STRING)
+    private Role role;
 
-    // Automatically update when record changes
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 }

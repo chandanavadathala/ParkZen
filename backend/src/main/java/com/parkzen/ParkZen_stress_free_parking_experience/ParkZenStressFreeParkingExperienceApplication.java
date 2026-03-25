@@ -6,8 +6,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class ParkZenStressFreeParkingExperienceApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(ParkZenStressFreeParkingExperienceApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(ParkZenStressFreeParkingExperienceApplication.class, args);
+    }
 
 }

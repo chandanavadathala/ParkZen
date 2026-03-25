@@ -1,64 +1,30 @@
-package com.parkzen.ParkZen_stress_free_parking_experience.service;
+package com.parkzen.Parkzen_stress_free_parking_experience.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
+import com.parkzen.Parkzen_stress_free_parking_experience.dto.AddSlotRequest;
+import com.parkzen.Parkzen_stress_free_parking_experience.dto.OwnerSlotDashboardResponse;
+import com.parkzen.Parkzen_stress_free_parking_experience.dto.UpdateSlotStatusRequest;
+import com.parkzen.Parkzen_stress_free_parking_experience.entity.Booking;
+import com.parkzen.Parkzen_stress_free_parking_experience.entity.Payment;
+import com.parkzen.Parkzen_stress_free_parking_experience.entity.Slot;
 
-import com.parkzen.ParkZen_stress_free_parking_experience.entity.Owner;
-import com.parkzen.ParkZen_stress_free_parking_experience.repository.OwnerRepository;
+import java.util.List;
 
-@Service
-public class OwnerService {
+public interface OwnerService {
 
-    @Autowired
-    private OwnerRepository repo;
+    Slot addSlot(AddSlotRequest request);
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    List<Slot> getSlotsByParking(Long parkingId);
 
-    // ✅ REGISTER OWNER
-    public Owner register(Owner owner) {
+    Slot updateSlotStatus(UpdateSlotStatusRequest request);
 
-        // check duplicate email
-        Owner existingEmail = repo.findByEmail(owner.getEmail()).orElse(null);
-        if (existingEmail != null) {
-            throw new RuntimeException("Email already registered");
-        }
+    List<OwnerSlotDashboardResponse> getDashboardSlots(Long parkingId);
 
-        // check duplicate mobile
-        Owner existingMobile = repo.findByMobile(owner.getMobile()).orElse(null);
-        if (existingMobile != null) {
-            throw new RuntimeException("Mobile already registered");
-        }
+    double getOccupancyRate(Long parkingId);
 
-        // encrypt password
-        owner.setPassword(passwordEncoder.encode(owner.getPassword()));
+    List<Booking> getOwnerBookings(Long parkingId);
 
-        return repo.save(owner);
-    }
+    List<Payment> getOwnerPayments(Long parkingId);
 
+    Double getOwnerRevenue(Long parkingId);
 
-    // ✅ LOGIN OWNER (Email OR Mobile)
-    public Owner login(String loginInput, String password) {
-
-        Owner owner = null;
-
-        // check email or mobile
-        if (loginInput.contains("@")) {
-            owner = repo.findByEmail(loginInput).orElse(null);
-        } else {
-            owner = repo.findByMobile(loginInput).orElse(null);
-        }
-
-        if (owner == null) {
-            throw new RuntimeException("Owner not found");
-        }
-
-        // verify password
-        if (!passwordEncoder.matches(password, owner.getPassword())) {
-            throw new RuntimeException("Invalid password");
-        }
-
-        return owner;
-    }
 }

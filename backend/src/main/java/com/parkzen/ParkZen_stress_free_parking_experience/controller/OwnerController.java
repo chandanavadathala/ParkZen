@@ -1,54 +1,82 @@
-package com.parkzen.ParkZen_stress_free_parking_experience.controller;
+package com.parkzen.Parkzen_stress_free_parking_experience.controller;
 
-import com.parkzen.ParkZen_stress_free_parking_experience.security.JwtUtil;
+import com.parkzen.Parkzen_stress_free_parking_experience.dto.AddSlotRequest;
+import com.parkzen.Parkzen_stress_free_parking_experience.dto.ApiResponse;
+import com.parkzen.Parkzen_stress_free_parking_experience.dto.OwnerSlotDashboardResponse;
+import com.parkzen.Parkzen_stress_free_parking_experience.dto.UpdateSlotStatusRequest;
+import com.parkzen.Parkzen_stress_free_parking_experience.entity.Booking;
+import com.parkzen.Parkzen_stress_free_parking_experience.entity.Payment;
+import com.parkzen.Parkzen_stress_free_parking_experience.entity.Slot;
+import com.parkzen.Parkzen_stress_free_parking_experience.service.OwnerService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.parkzen.ParkZen_stress_free_parking_experience.dto.LoginRequest;
-import com.parkzen.ParkZen_stress_free_parking_experience.entity.Owner;
-import com.parkzen.ParkZen_stress_free_parking_experience.service.OwnerService;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/owners")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/owner")
 public class OwnerController {
 
     @Autowired
-    private OwnerService service;
-    @Autowired
-    private JwtUtil jwtUtil;
+    private OwnerService ownerService;
 
 
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody Owner owner) {
+    @PostMapping("/add-slot")
+    public ResponseEntity<ApiResponse<Slot>> addSlot(@RequestBody AddSlotRequest request) {
 
-        try {
-            Owner savedOwner = service.register(owner);
-            return new ResponseEntity<>(savedOwner, HttpStatus.CREATED);
+        Slot slot = ownerService.addSlot(request);
 
-        } catch (RuntimeException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-        }
+        ApiResponse<Slot> response = ApiResponse.<Slot>builder()
+                .status(200)
+                .message("Slot added successfully")
+                .data(slot)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    @GetMapping("/slots/{parkingId}")
+    public List<Slot> getSlots(@PathVariable Long parkingId) {
 
-        try {
-            Owner owner = service.login(request.getLogin(), request.getPassword());
-            String token = jwtUtil.generateToken(owner.getEmail(), "OWNER");
-            return ResponseEntity.ok(token);
+        return ownerService.getSlotsByParking(parkingId);
+    }
 
-        } catch (RuntimeException e) {
 
-            if (e.getMessage().equals("Owner not found")) {
-                return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-            }
+    @PutMapping("/update-slot-status")
+    public Slot updateSlotStatus(@RequestBody UpdateSlotStatusRequest request) {
 
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.UNAUTHORIZED);
-        }
+        return ownerService.updateSlotStatus(request);
+    }
+
+    @GetMapping("/dashboard/{parkingId}")
+    public List<OwnerSlotDashboardResponse> getDashboard(@PathVariable Long parkingId) {
+
+        return ownerService.getDashboardSlots(parkingId);
+    }
+
+    @GetMapping("/occupancy/{parkingId}")
+    public double getOccupancy(@PathVariable Long parkingId) {
+
+        return ownerService.getOccupancyRate(parkingId);
+    }
+
+    @GetMapping("/bookings/{parkingId}")
+    public List<Booking> getOwnerBookings(@PathVariable Long parkingId) {
+
+        return ownerService.getOwnerBookings(parkingId);
+    }
+
+    @GetMapping("/payments/{parkingId}")
+    public List<Payment> getOwnerPayments(@PathVariable Long parkingId) {
+
+        return ownerService.getOwnerPayments(parkingId);
+    }
+
+    @GetMapping("/revenue/{parkingId}")
+    public Double getRevenue(@PathVariable Long parkingId) {
+
+        return ownerService.getOwnerRevenue(parkingId);
     }
 }

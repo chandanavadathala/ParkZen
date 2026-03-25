@@ -1,12 +1,20 @@
-package com.parkzen.ParkZen_stress_free_parking_experience.repository;
+package com.parkzen.Parkzen_stress_free_parking_experience.repository;
+
+
+
+import com.parkzen.Parkzen_stress_free_parking_experience.entity.User;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
-import org.springframework.data.jpa.repository.JpaRepository;
-import com.parkzen.ParkZen_stress_free_parking_experience.entity.User;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
+
     Optional<User> findByMobile(String mobile);
+
+    boolean existsByEmail(String email);
+
+    boolean existsByMobile(String mobile);
 
 }

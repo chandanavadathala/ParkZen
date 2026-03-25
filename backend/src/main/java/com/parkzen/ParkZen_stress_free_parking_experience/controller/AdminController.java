@@ -1,50 +1,26 @@
-package com.parkzen.ParkZen_stress_free_parking_experience.controller;
+package com.parkzen.Parkzen_stress_free_parking_experience.controller;
 
 
-import com.parkzen.ParkZen_stress_free_parking_experience.security.JwtUtil;
+import com.parkzen.Parkzen_stress_free_parking_experience.entity.User;
+import com.parkzen.Parkzen_stress_free_parking_experience.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.parkzen.ParkZen_stress_free_parking_experience.dto.LoginRequest;
-import com.parkzen.ParkZen_stress_free_parking_experience.entity.Admin;
-import com.parkzen.ParkZen_stress_free_parking_experience.service.AdminService;
+
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/admins")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/admin")
 public class AdminController {
 
     @Autowired
-    private AdminService service;
-    @Autowired
-    private JwtUtil jwtUtil;
+    private UserRepository userRepository;
 
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody Admin admin) {
-        try {
-            Admin saved = service.register(admin);
-            return new ResponseEntity<>(saved, HttpStatus.CREATED);
-        } catch (RuntimeException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-        }
+
+    // View all users
+    @GetMapping("/users")
+    public List<User> getAllUsers() {
+
+        return userRepository.findAll();
     }
 
-
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        try {
-            Admin admin = service.login(request.getLogin(), request.getPassword());
-            String token = jwtUtil.generateToken(admin.getEmail(), "ADMIN");
-            return ResponseEntity.ok(token);
-
-        } catch (RuntimeException e) {
-
-            if (e.getMessage().equals("Admin not found")) {
-                return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-            }
-
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.UNAUTHORIZED);
-        }
-    }
 }
