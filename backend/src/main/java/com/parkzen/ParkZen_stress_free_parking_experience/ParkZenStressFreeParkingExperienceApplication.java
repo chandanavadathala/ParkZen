@@ -1,4 +1,4 @@
-package com.parkzen.Parkzen_stress_free_parking_experience;
+package com.parkzen.ParkZen_stress_free_parking_experience;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

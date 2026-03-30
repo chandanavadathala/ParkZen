@@ -1,10 +1,10 @@
-package com.parkzen.Parkzen_stress_free_parking_experience.controller;
+package com.parkzen.ParkZen_stress_free_parking_experience.controller;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.parkzen.Parkzen_stress_free_parking_experience.repository.UserRepository;
-import com.parkzen.Parkzen_stress_free_parking_experience.repository.BookingRepository;
+import com.parkzen.ParkZen_stress_free_parking_experience.repository.UserRepository;
+import com.parkzen.ParkZen_stress_free_parking_experience.repository.BookingRepository;
 
 @RestController
 @RequestMapping("/admin/dashboard")
