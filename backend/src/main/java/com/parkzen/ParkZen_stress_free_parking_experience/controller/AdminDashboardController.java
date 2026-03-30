@@ -1,0 +1,31 @@
+package com.parkzen.Parkzen_stress_free_parking_experience.controller;
+
+import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.parkzen.Parkzen_stress_free_parking_experience.repository.UserRepository;
+import com.parkzen.Parkzen_stress_free_parking_experience.repository.BookingRepository;
+
+@RestController
+@RequestMapping("/admin/dashboard")
+public class AdminDashboardController {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    // Admin functionality 1
+    @GetMapping("/totalUsers")
+    public long getTotalUsers(){
+        return userRepository.count();
+    }
+
+    // Admin functionality 2
+    @GetMapping("/totalBookings")
+    public long getTotalBookings(){
+        return bookingRepository.count();
+    }
+
+}

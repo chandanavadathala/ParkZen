@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import CountUp from "react-countup";
 import { useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react"; // ✅ QR code library
+import { BookingManager } from "../utils/bookingLogic.js";
 import {
   // Navigation & Core
   LayoutDashboard,
@@ -33,6 +34,8 @@ import {
 export default function UserDashboard() {
   const TOTAL_SLOTS = 50;
   const [availableSlots, setAvailableSlots] = useState(32);
+  const [selectedDuration, setSelectedDuration] = useState("2"); // Default to 2 hours
+  const [activeSession, setActiveSession] = useState(null);
 
   // ===== PLACE SEARCH =====
   const places = {
@@ -659,6 +662,145 @@ export default function UserDashboard() {
             )}
           </div>
         )}
+        {/* ===== AI CAMERA FEED ===== */}
+        {selectedPlace && (
+          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 p-8 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+                  <div className="bg-blue-100 text-blue-600 p-2 rounded-xl">
+                    <Scan size={24} />
+                  </div>
+                  AI Camera Feed
+                </h2>
+                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">
+                  {selectedPlace} • Live Object Detection
+                </p>
+              </div>
+              
+              <button
+                onClick={() => {
+                  // Simulate YOLO processing
+                  setIsProcessing(true);
+                  setTimeout(() => {
+                    // Randomly update some slots to simulate detection
+                    setPlaceSlots(prev => prev.map(slot => ({
+                      ...slot,
+                      occupied: Math.random() < 0.6 // Random occupancy
+                    })));
+                    setIsProcessing(false);
+                  }, 2000);
+                }}
+                disabled={isProcessing}
+                className="bg-blue-600 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isProcessing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Processing Feed...
+                  </>
+                ) : (
+                  <>
+                    <Scan size={16} />
+                    Process Feed
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Camera Feed Placeholder */}
+            <div className="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video mb-6">
+              {isProcessing ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90">
+                  <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
+                  <p className="text-white font-bold">YOLO Model Processing...</p>
+                  <p className="text-slate-400 text-sm mt-2">Detecting vehicles and empty spaces</p>
+                </div>
+              ) : (
+                <>
+                  {/* Simulated camera feed background */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900">
+                    <div className="absolute inset-0 opacity-20">
+                      {/* Grid overlay */}
+                      <div className="grid grid-cols-8 grid-rows-6 h-full w-full">
+                        {Array.from({ length: 48 }).map((_, i) => (
+                          <div key={i} className="border border-slate-700/30" />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Detection boxes */}
+                  <div className="absolute inset-0 p-4">
+                    <div className="relative h-full w-full">
+                      {/* Simulated detection boxes */}
+                      {placeSlots.slice(0, 6).map((slot, index) => (
+                        <div
+                          key={slot.number}
+                          className={`absolute border-2 ${slot.occupied ? 'border-red-500 bg-red-500/10' : 'border-green-500 bg-green-500/10'} rounded-lg p-2`}
+                          style={{
+                            top: `${Math.floor(index / 3) * 45 + 10}%`,
+                            left: `${(index % 3) * 30 + 5}%`,
+                            width: '25%',
+                            height: '35%'
+                          }}
+                        >
+                          <div className={`text-xs font-bold ${slot.occupied ? 'text-red-400' : 'text-green-400'}`}>
+                            {slot.occupied ? '🚗 Vehicle' : '📍 Empty'}
+                          </div>
+                          <div className={`text-[10px] ${slot.occupied ? 'text-red-300' : 'text-green-300'} mt-1`}>
+                            Slot {slot.number} • {slot.occupied ? '95%' : '98%'} confidence
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Camera info overlay */}
+                  <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2">
+                    <div className="text-green-400 text-xs font-bold flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                      LIVE
+                    </div>
+                    <div className="text-white text-xs mt-1">
+                      Camera {selectedPlace} - Zone A
+                    </div>
+                  </div>
+                  
+                  {/* Detection stats */}
+                  <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2">
+                    <div className="text-white text-xs">
+                      <div className="flex justify-between gap-4">
+                        <span>Detected:</span>
+                        <span className="font-bold">{placeSlots.filter(s => s.occupied).length}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span>Empty:</span>
+                        <span className="font-bold">{placeSlots.filter(s => !s.occupied).length}</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="bg-blue-50 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <div className="bg-blue-100 text-blue-600 p-2 rounded-lg">
+                  <Scan size={16} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-slate-800 text-sm mb-1">AI-Powered Detection</h3>
+                  <p className="text-slate-600 text-xs leading-relaxed">
+                    Our YOLO computer vision model continuously monitors parking spaces in real-time, 
+                    automatically detecting vehicle presence and updating slot availability. 
+                    Click "Process Feed" to simulate the AI detection process.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {/* ===== PARKZEN BOOKING MODAL ===== */}
         {isConfirming && !ticket && (
           <motion.div
@@ -711,6 +853,32 @@ export default function UserDashboard() {
                     >
                       <option value="Regular">Regular Spot</option>
                       <option value="Premium">Premium Spot (+20%)</option>
+                    </select>
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <ChevronRight
+                        size={16}
+                        className="rotate-90 text-slate-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Parking Duration Selection */}
+                <div className="group bg-slate-50 border border-slate-100 rounded-2xl p-4 transition-all focus-within:ring-4 focus-within:ring-emerald-500/10 focus-within:border-emerald-200">
+                  <label className="flex items-center gap-2 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <Clock size={14} className="text-emerald-500" />
+                    Parking Duration
+                  </label>
+                  <div className="relative">
+                    <select
+                      className="w-full bg-transparent outline-none font-bold text-slate-800 appearance-none cursor-pointer relative z-10"
+                      value={selectedDuration}
+                      onChange={(e) => setSelectedDuration(e.target.value)}
+                    >
+                      <option value="1">1 Hour</option>
+                      <option value="2">2 Hours</option>
+                      <option value="4">4 Hours</option>
+                      <option value="8">8 Hours</option>
                     </select>
                     <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
                       <ChevronRight
@@ -823,8 +991,8 @@ export default function UserDashboard() {
             </div>
           </motion.div>
         )}
-        {/* ===== PARKZEN DIGITAL TICKET ===== */}
-        {ticket && (
+        {/* ===== GATE ARRIVAL / ACTIVE SESSION ===== */}
+        {ticket && !activeSession && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -949,7 +1117,6 @@ export default function UserDashboard() {
             </div>
           </motion.div>
         )}
-        ;{/* ===== ENTRY AT PARKING ===== */}
         {/* ===== PARKZEN ENTRY GATE SCANNER ===== */}
         {ticket && !entryLogged && (
           <motion.div
@@ -997,25 +1164,12 @@ export default function UserDashboard() {
                   whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {
-                    const now = new Date();
-                    const timeString = now.toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    });
-
-                    setEntryTime(timeString);
-                    setEntryLogged(true);
-
-                    setBookings((prev) =>
-                      prev.map((b) =>
-                        b.id === ticket.bookingId
-                          ? { ...b, start: timeString }
-                          : b,
-                      ),
-                    );
-
-                    setParkingActive(true);
-                    setParkingStartTime(now);
+                    const bookingManager = new BookingManager({ user: { walletBalance: 0 } });
+                    const result = bookingManager.startLiveSession(ticket.bookingId, 4); // 4 hours session
+                    
+                    if (result.success) {
+                      setActiveSession(result.session);
+                    }
                   }}
                   className="w-full md:w-auto bg-slate-900 text-white py-4 px-8 rounded-2xl font-black shadow-xl shadow-slate-200 flex items-center justify-center gap-3 hover:bg-emerald-600 transition-all duration-300 group"
                 >

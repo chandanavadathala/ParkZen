@@ -3,6 +3,9 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 import AddSlotModal from "../components/AddSlotModal";
 import BookingLogs from "../components/BookingLogs";
 import RevenueManagement from "../components/RevenueManagement";
+import RevenueHeatmap from "../components/RevenueHeatmap";
+import { BookingManager } from "../utils/bookingLogic.js";
+import { getDynamicPrice } from "../utils/pricingLogic.js";
 
 import {
   LayoutDashboard,
@@ -31,9 +34,14 @@ const OwnerDashboard = () => {
   const [gateStatus, setGateStatus] = useState("Closed");
   // Tracks people currently inside the lot
   const [activeSessions, setActiveSessions] = useState([]);
+  const [activeParkingSession, setActiveParkingSession] = useState(null);
+  const [timeRemaining, setTimeRemaining] = useState({ hours: 0, minutes: 0, seconds: 0 });
 
-  // Tracks everyone who has completed their visit
-  const [gateHistory, setGateHistory] = useState([]);
+  // New state for analytics features
+  const [occupancySimulation, setOccupancySimulation] = useState(50);
+  const [weather, setWeather] = useState('Clear');
+  const [eventNearby, setEventNearby] = useState(false);
+  const basePrice = 50;
 
   // --- MOCK DATA STATE ---
   const [slots, setSlots] = useState([
@@ -245,6 +253,339 @@ const OwnerDashboard = () => {
     );
   };
 
+  // Analytics View Component
+  function AnalyticsView() {
+    const data = [
+      { day: "Mon", val: 45 },
+      { day: "Tue", val: 52 },
+      { day: "Wed", val: 38 },
+      { day: "Thu", val: 65 },
+      { day: "Fri", val: 48 },
+      { day: "Sat", val: 80 },
+      { day: "Sun", val: 95 },
+    ];
+
+    const pricing = getDynamicPrice(basePrice, occupancySimulation, weather, eventNearby);
+
+    return (
+      <div className="space-y-8">
+        {/* Top Row: Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[
+            {
+              label: "Total Revenue",
+              value: "₹42,500",
+              change: "+12%",
+              icon: CreditCard,
+              color: "text-emerald-600",
+            },
+            {
+              label: "Avg. Ticket",
+              value: "₹180",
+              change: "-5%",
+              icon: Clock,
+              color: "text-blue-600",
+            },
+            {
+              label: "Monthly Pass Users",
+              value: "45",
+              change: "+4",
+              icon: ShieldCheck,
+              color: "text-purple-600",
+            },
+            {
+              label: "Active Alerts",
+              value: "2",
+              change: "Stable",
+              icon: AlertTriangle,
+              color: "text-orange-600",
+            },
+          ].map((stat, i) => (
+            <div
+              key={i}
+              className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm"
+            >
+              <div className="flex justify-between items-start">
+                <div
+                  className={`p-2 rounded-lg ${stat.color.replace("text", "bg")}/10`}
+                >
+                  <stat.icon className={`${stat.color}`} size={20} />
+                </div>
+                <span className="text-[10px] font-bold bg-gray-100 px-2 py-0.5 rounded text-gray-500">
+                  {stat.change}
+                </span>
+              </div>
+              <p className="text-gray-500 text-xs mt-3 font-medium">
+                {stat.label}
+              </p>
+              <p className="text-xl font-bold text-slate-800">
+                {stat.value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Middle Row: Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* 1. Peak Utilization Chart */}
+          <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="font-bold text-slate-800">
+                  Occupancy Trends
+                </h3>
+                <p className="text-xs text-gray-400">
+                  Hourly traffic for today
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>{" "}
+                  Normal
+                </span>
+                <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                  <span className="w-2 h-2 bg-red-500 rounded-full"></span>{" "}
+                  Peak
+                </span>
+              </div>
+            </div>
+            <div className="flex items-end gap-3 h-48 px-2">
+              {[15, 25, 40, 75, 95, 100, 90, 70, 50, 30, 20].map((h, i) => (
+                <div
+                  key={i}
+                  className="flex-1 flex flex-col items-center gap-2 group"
+                >
+                  <div
+                    className={`w-full rounded-t-sm transition-all relative ${
+                      h > 80 ? "bg-red-500 opacity-80 group-hover:opacity-100" : "bg-blue-500 opacity-80 group-hover:opacity-100"
+                        }`}
+                    style={{ height: `${h}%` }}
+                  >
+                    <div className="opacity-0 group-hover:opacity-100 transition-all duration-1000">
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1 rounded whitespace-nowrap z-20">
+                        {h}% Full
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] text-gray-400 font-medium">
+                    {i + 9} AM
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 2. Revenue Breakdown by Vehicle Type */}
+          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <h3 className="font-bold mb-6 text-slate-800">
+              Revenue Breakdown
+            </h3>
+            <div className="space-y-5">
+              {[
+                {
+                  type: "4-Wheelers",
+                  amount: "₹28,400",
+                  perc: 60,
+                  color: "bg-blue-600",
+                },
+                {
+                  type: "2-Wheelers",
+                  amount: "₹9,200",
+                  perc: 25,
+                  color: "bg-indigo-400",
+                },
+                {
+                  type: "EV Charging",
+                  amount: "₹4,900",
+                  perc: 15,
+                  color: "bg-emerald-500",
+                },
+              ].map((item, i) => (
+                <div key={i}>
+                  <div className="flex justify-between text-xs mb-1.5">
+                    <span className="font-semibold text-slate-700">
+                      {item.type}
+                    </span>
+                    <span className="font-bold text-slate-900">
+                      {item.amount}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
+                    <div
+                      className={`${item.color} h-full transition-all duration-1000`}
+                      style={{ width: `${item.perc}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-10 p-4 bg-slate-50 rounded-xl border border-slate-100 text-center">
+              <p className="text-[10px] font-black uppercase tracking-wider font-bold">
+                Estimated Monthly Earnings
+              </p>
+              <p className="text-3xl font-black text-slate-900 mt-1">
+                ₹1,25,500
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Row: AI Insights */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-slate-900 p-8 rounded-3xl text-white shadow-2xl relative overflow-hidden border border-slate-800">
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-blue-500/20 rounded-2xl border border-blue-500/30">
+                  <TrendingUp size={24} className="text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-xl text-white">
+                    Revenue Optimizer
+                  </h3>
+                  <p className="text-blue-400 text-xs font-bold uppercase tracking-widest">
+                    AI Suggestion
+                  </p>
+                </div>
+              </div>
+              <p className="text-slate-400 text-sm leading-relaxed mb-8">
+                Current occupancy for{" "}
+                <span className="text-white font-medium">
+                  4-Wheelers
+                </span>{" "}
+                is peaking 2 hours earlier than usual. Apply a{" "}
+                <span className="text-emerald-400 font-bold">
+                  ₹20 surcharge
+                </span>{" "}
+                for instant bookings to maximize evening revenue.
+              </p>
+              <div className="flex gap-4">
+                <button className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-600/20">
+                  Apply ₹20 Hike
+                </button>
+                <button className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-6 py-3 rounded-xl text-xs font-bold transition-all">
+                  Ignore
+                </button>
+              </div>
+            </div>
+            {/* Decorative elements */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl -mr-16 -mt-16" />
+          </div>
+
+          <div className="bg-white p-8 rounded-3xl border border-gray-200 flex flex-col justify-between shadow-sm">
+            <div>
+              <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4 text-lg">
+                <ShieldCheck size={22} className="text-emerald-500" />{" "}
+                Operational Health
+              </h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                  <span className="text-sm text-gray-600">
+                    Entry Gate Sensors
+                  </span>
+                  <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded">
+                    Online
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                  <span className="text-sm text-gray-600">
+                    Exit Gate Sensors
+                  </span>
+                  <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded">
+                    Online
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                  <span className="text-sm text-gray-600">
+                    AI Camera Feed
+                  </span>
+                  <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded">
+                    Processing
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                  <span className="text-sm text-gray-600">
+                    Network Status
+                  </span>
+                  <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded">
+                    Stable
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* AI PRICING CONTROLLER */}
+        <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-8">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <TrendingUp size={24} className="text-blue-600" />{" "}
+              AI Pricing Controller
+            </h3>
+            <p className="text-xs text-gray-400">
+              Dynamic pricing based on real-time factors
+            </p>
+          </div>
+          <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium text-slate-700">
+                Current Price: ₹{typeof pricing === 'number' ? pricing.toFixed(2) : '50.00'}
+              </span>
+              <span className={`text-xs font-bold px-2 py-1 rounded ${
+                pricing > basePrice ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+              }`}>
+                {pricing > basePrice ? 'SURGE' : 'BASE'}
+              </span>
+            </div>
+          </div>
+          <div>
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "8px" }}>
+                Occupancy Rate: {occupancySimulation}%
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={occupancySimulation}
+                onChange={(e) => setOccupancySimulation(Number(e.target.value))}
+                style={{ width: "100%", height: "6px", borderRadius: "3px", background: "#e5e7eb", outline: "none" }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "8px" }}>
+                Weather Condition
+              </label>
+              <select
+                value={weather}
+                onChange={(e) => setWeather(e.target.value)}
+                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "12px" }}
+              >
+                <option value="Clear">Clear</option>
+                <option value="Rain">Rain</option>
+                <option value="Fog">Fog</option>
+                <option value="Event">Event</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: "20px", display: "flex", alignItems: "center" }}>
+              <label style={{ display: "flex", alignItems: "center", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "8px" }}>
+                <input
+                  type="checkbox"
+                  checked={eventNearby}
+                  onChange={(e) => setEventNearby(e.target.checked)}
+                  style={{ marginRight: "8px" }}
+                />
+                Event Nearby
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-gray-900">
       {/* SIDEBAR NAVIGATION */}
@@ -264,7 +605,7 @@ const OwnerDashboard = () => {
         <SidebarItem id="gate" icon={QrCode} label="Entry / Exit" />
         <SidebarItem id="revenue" icon={CreditCard} label="Payments" />
         <SidebarItem id="analytics" icon={BarChart3} label="Analytics" />
-
+        <SidebarItem id="heatmap" icon={TrendingUp} label="Heatmap" />
         <SidebarItem id="notifications" icon={Bell} label="Alerts" />
       </aside>
 
@@ -487,233 +828,26 @@ const OwnerDashboard = () => {
         {/* FEATURE 6: UPGRADED ANALYTICS - INDIAN RUPEE */}
         {activeTab === "analytics" && (
           <div className="space-y-8">
-            {/* Top Row: Quick Stats in ₹ */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {[
-                {
-                  label: "Total Revenue",
-                  value: "₹42,500",
-                  change: "+12%",
-                  icon: CreditCard,
-                  color: "text-emerald-600",
-                },
-                {
-                  label: "Avg. Ticket",
-                  value: "₹180",
-                  change: "-5%",
-                  icon: Clock,
-                  color: "text-blue-600",
-                },
-                {
-                  label: "Monthly Pass Users",
-                  value: "45",
-                  change: "+4",
-                  icon: ShieldCheck,
-                  color: "text-purple-600",
-                },
-                {
-                  label: "Active Alerts",
-                  value: "2",
-                  change: "Stable",
-                  icon: AlertTriangle,
-                  color: "text-orange-600",
-                },
-              ].map((stat, i) => (
-                <div
-                  key={i}
-                  className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm"
-                >
-                  <div className="flex justify-between items-start">
-                    <div
-                      className={`p-2 rounded-lg ${stat.color.replace("text", "bg")}/10`}
-                    >
-                      <stat.icon className={`${stat.color}`} size={20} />
-                    </div>
-                    <span className="text-[10px] font-bold bg-gray-100 px-2 py-0.5 rounded text-gray-500">
-                      {stat.change}
-                    </span>
-                  </div>
-                  <p className="text-gray-500 text-xs mt-3 font-medium">
-                    {stat.label}
-                  </p>
-                  <p className="text-xl font-bold text-slate-800">
-                    {stat.value}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            {/* Middle Row: Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* 1. Peak Utilization Chart */}
-              <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h3 className="font-bold text-slate-800">
-                      Occupancy Trends
-                    </h3>
-                    <p className="text-xs text-gray-400">
-                      Hourly traffic for today
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="flex items-center gap-1 text-[10px] text-gray-500">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>{" "}
-                      Normal
-                    </span>
-                    <span className="flex items-center gap-1 text-[10px] text-gray-500">
-                      <span className="w-2 h-2 bg-red-500 rounded-full"></span>{" "}
-                      Peak
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-end gap-3 h-48 px-2">
-                  {[15, 25, 40, 75, 95, 100, 90, 70, 50, 30, 20].map((h, i) => (
-                    <div
-                      key={i}
-                      className="flex-1 flex flex-col items-center gap-2 group"
-                    >
-                      <div
-                        className={`w-full rounded-t-sm transition-all relative ${h > 80 ? "bg-red-500" : "bg-blue-500 opacity-80 group-hover:opacity-100"}`}
-                        style={{ height: `${h}%` }}
-                      >
-                        <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap z-20">
-                          {h}% Full
-                        </div>
-                      </div>
-                      <span className="text-[9px] text-gray-400 font-medium">
-                        {i + 9} AM
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 2. Revenue Breakdown by Vehicle Type */}
-              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                <h3 className="font-bold mb-6 text-slate-800">
-                  Revenue Breakdown
-                </h3>
-                <div className="space-y-5">
-                  {[
-                    {
-                      type: "4-Wheelers",
-                      amount: "₹28,400",
-                      perc: 60,
-                      color: "bg-blue-600",
-                    },
-                    {
-                      type: "2-Wheelers",
-                      amount: "₹9,200",
-                      perc: 25,
-                      color: "bg-indigo-400",
-                    },
-                    {
-                      type: "EV Charging",
-                      amount: "₹4,900",
-                      perc: 15,
-                      color: "bg-emerald-500",
-                    },
-                  ].map((item, i) => (
-                    <div key={i}>
-                      <div className="flex justify-between text-xs mb-1.5">
-                        <span className="font-semibold text-slate-700">
-                          {item.type}
-                        </span>
-                        <span className="font-bold text-slate-900">
-                          {item.amount}
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
-                        <div
-                          className={`${item.color} h-full transition-all duration-1000`}
-                          style={{ width: `${item.perc}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-10 p-4 bg-slate-50 rounded-xl border border-slate-100 text-center">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">
-                    Estimated Monthly Earnings
-                  </p>
-                  <p className="text-3xl font-black text-slate-900 mt-1">
-                    ₹1,25,500
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Row: AI Insights in INR context */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-slate-900 p-8 rounded-3xl text-white shadow-2xl relative overflow-hidden border border-slate-800">
-                <div className="relative z-10">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-3 bg-blue-500/20 rounded-2xl border border-blue-500/30">
-                      <TrendingUp size={24} className="text-blue-400" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-xl">Revenue Optimizer</h3>
-                      <p className="text-blue-400 text-xs font-bold uppercase tracking-widest">
-                        AI Suggestion
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-slate-400 text-sm leading-relaxed mb-8">
-                    Current occupancy for{" "}
-                    <span className="text-white font-medium">4-Wheelers</span>{" "}
-                    is peaking 2 hours earlier than usual. Apply a{" "}
-                    <span className="text-emerald-400 font-bold">
-                      ₹20 surcharge
-                    </span>{" "}
-                    for instant bookings to maximize evening revenue.
-                  </p>
-                  <div className="flex gap-4">
-                    <button className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-600/20">
-                      Apply ₹20 Hike
-                    </button>
-                    <button className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-6 py-3 rounded-xl text-xs font-bold transition-all">
-                      Ignore
-                    </button>
-                  </div>
-                </div>
-                {/* Decorative elements */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl -mr-16 -mt-16" />
-              </div>
-
-              <div className="bg-white p-8 rounded-3xl border border-gray-200 flex flex-col justify-between shadow-sm">
-                <div>
-                  <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4 text-lg">
-                    <ShieldCheck size={22} className="text-emerald-500" />{" "}
-                    Operational Health
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-                      <span className="text-sm text-gray-600">
-                        Entry Gate Sensors
-                      </span>
-                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
-                        Online
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-                      <span className="text-sm text-gray-600">
-                        EV Charger Cluster
-                      </span>
-                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
-                        Online
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-6 flex items-center gap-3 text-emerald-600 font-bold text-xs bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
-                  <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping" />
-                  SYSTEMS FULLY OPERATIONAL
-                </div>
-              </div>
-            </div>
+            <AnalyticsView />
           </div>
         )}
+
+        {/* FEATURE 7: REVENUE HEATMAP */}
+        {activeTab === "heatmap" && (
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-slate-800">Revenue Heatmap</h3>
+              <p className="text-sm text-gray-500">Visualize parking patterns and peak hours</p>
+            </div>
+            <RevenueHeatmap
+              basePrice={basePrice}
+              occupancyRate={occupancySimulation}
+              weather={weather}
+              eventNearby={eventNearby}
+            />
+          </div>
+        )}
+
         {/* FEATURE 3: BOOKING MONITORING (Categorized) */}
         {activeTab === "bookings" && (
           <BookingLogs bookings={bookings} onMarkAsPaid={handleMarkAsPaid} />
