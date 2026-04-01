@@ -9,6 +9,10 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [vehicleNumber, setVehicleNumber] = useState("");
+  
+  // Owner-specific fields
+  const [parkingName, setParkingName] = useState("");
+  const [parkingAddress, setParkingAddress] = useState("");
 
   // Hidden state for admin access
   const [adminClickCount, setAdminClickCount] = useState(0);
@@ -25,6 +29,44 @@ export default function AuthPage() {
       setAdminClickCount(newCount);
       // Reset count if they don't finish clicking within 3 seconds
       setTimeout(() => setAdminClickCount(0), 3000);
+    }
+  };
+
+  const handleGetCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          
+          try {
+            // Use reverse geocoding to get address from coordinates
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+            );
+            const data = await response.json();
+            
+            if (data && data.display_name) {
+              setParkingAddress(data.display_name);
+              alert("Location captured successfully!");
+            } else {
+              // Fallback to coordinates if address not found
+              setParkingAddress(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+              alert("Location captured (coordinates only)");
+            }
+          } catch (error) {
+            // If geocoding fails, use coordinates
+            setParkingAddress(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+            alert("Location captured (coordinates only)");
+            console.error("Geocoding error:", error);
+          }
+        },
+        (error) => {
+          alert("Unable to retrieve location. Please enter manually.");
+          console.error("Geolocation error:", error);
+        }
+      );
+    } else {
+      alert("Geolocation is not supported by your browser");
     }
   };
 
@@ -59,6 +101,18 @@ export default function AuthPage() {
       return;
     }
 
+    // Owner-specific validations
+    if (mode === "signup" && role === "owner") {
+      if (!parkingName.trim()) {
+        alert("Enter your parking name");
+        return;
+      }
+      if (!parkingAddress.trim()) {
+        alert("Enter your parking address or use current location");
+        return;
+      }
+    }
+
     // Normal flow for User/Owner
     navigate("/verify-otp", {
       state: {
@@ -68,6 +122,7 @@ export default function AuthPage() {
         password,
         role,
         ...(role === "user" && { vehicleNumber }),
+        ...(role === "owner" && { parkingName, parkingAddress }),
       },
     });
   };
@@ -152,6 +207,47 @@ export default function AuthPage() {
               />
             )}
 
+            {/* OWNER-SPECIFIC FIELDS */}
+            {mode === "signup" && role === "owner" && (
+              <>
+                <input
+                  type="text"
+                  placeholder="Parking Name"
+                  value={parkingName}
+                  onChange={(e) => setParkingName(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-400 outline-none"
+                />
+
+                <input
+                  type="text"
+                  placeholder="Parking Address"
+                  value={parkingAddress}
+                  onChange={(e) => setParkingAddress(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-400 outline-none"
+                />
+
+                <button
+                  type="button"
+                  onClick={handleGetCurrentLocation}
+                  className="w-full py-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition flex items-center justify-center gap-2"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Get Current Location
+                </button>
+              </>
+            )}
+
             {/* VEHICLE NUMBER (Signup only for User) */}
             {mode === "signup" && role === "user" && (
               <input
@@ -213,7 +309,7 @@ export default function AuthPage() {
           {/* SWITCH MODE */}
           <div className="text-center text-sm mt-6 text-gray-600">
             {mode === "login"
-              ? "Don’t have an account?"
+              ? "Don't have an account?"
               : "Already have an account?"}
             <button
               type="button"

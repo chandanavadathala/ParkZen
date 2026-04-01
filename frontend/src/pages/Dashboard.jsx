@@ -1,13 +1,15 @@
 import { motion } from "framer-motion";
 import CountUp from "react-countup";
-import { useState, useEffect } from "react";
-import { QRCodeCanvas } from "qrcode.react"; // ✅ QR code library
+import { useState, useEffect, useRef } from "react";
+import { QRCodeCanvas } from "qrcode.react"; // QR code library
 import { BookingManager } from "../utils/bookingLogic.js";
+import VoiceCommand from "../components/VoiceCommand";
 import {
   // Navigation & Core
   LayoutDashboard,
   User,
   LogOut,
+  Mic,
   ChevronRight,
   Navigation,
 
@@ -36,6 +38,13 @@ export default function UserDashboard() {
   const [availableSlots, setAvailableSlots] = useState(32);
   const [selectedDuration, setSelectedDuration] = useState("2"); // Default to 2 hours
   const [activeSession, setActiveSession] = useState(null);
+  const [activeTab, setActiveTab] = useState("dashboard"); // For navigation within dashboard
+
+  // Voice Commands State
+  const [isVoiceListening, setIsVoiceListening] = useState(false);
+  const [voiceCommand, setVoiceCommand] = useState('');
+  const [voiceFeedback, setVoiceFeedback] = useState('Click microphone to start');
+  const recognitionRef = useRef(null);
 
   // ===== PLACE SEARCH =====
   const places = {
@@ -194,6 +203,216 @@ export default function UserDashboard() {
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}`;
     window.open(mapsUrl, "_blank");
   };
+
+  // ===== VOICE COMMANDS =====
+  const initializeSpeechRecognition = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      setVoiceFeedback('Speech recognition not supported in this browser');
+      return null;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    
+    // Improved settings for better recognition
+    recognition.continuous = false;
+    recognition.interimResults = true; // Enable interim results for better feedback
+    recognition.lang = 'en-US';
+    recognition.maxAlternatives = 3;
+    recognition.timeout = 10000; // 10 seconds timeout
+
+    recognition.onresult = (event) => {
+      console.log('Speech recognition result event:', event);
+      console.log('Results length:', event.results.length);
+      
+      let finalTranscript = '';
+      let interimTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        console.log(`Result ${i}:`, transcript, 'IsFinal:', event.results[i].isFinal);
+        
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      console.log('Final transcript:', finalTranscript);
+      console.log('Interim transcript:', interimTranscript);
+
+      if (finalTranscript) {
+        setVoiceCommand(finalTranscript);
+        console.log('Calling processVoiceCommand with:', finalTranscript);
+        processVoiceCommand(finalTranscript);
+      } else if (interimTranscript) {
+        setVoiceFeedback(`🎤 Hearing: "${interimTranscript}"`);
+        // Also process interim results as a fallback
+        if (interimTranscript.length > 5) { // Only process if it's substantial
+          console.log('Processing interim result:', interimTranscript);
+          processVoiceCommand(interimTranscript);
+        }
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      handleVoiceError(event.error);
+    };
+
+    recognition.onend = () => {
+      setIsVoiceListening(false);
+      setVoiceFeedback('Click microphone to start');
+    };
+
+    recognition.onstart = () => {
+      console.log('Speech recognition started');
+      setVoiceFeedback('🎤 Listening... Speak clearly');
+    };
+
+    recognition.onspeechstart = () => {
+      console.log('Speech detected');
+      setVoiceFeedback('🎤 Speech detected...');
+    };
+
+    recognition.onspeechend = () => {
+      console.log('Speech ended');
+      setVoiceFeedback('🎤 Processing speech...');
+    };
+
+    return recognition;
+  };
+
+  const handleVoiceError = (error) => {
+    setIsVoiceListening(false);
+    
+    switch (error) {
+      case 'not-allowed':
+        setVoiceFeedback('❌ Microphone permission denied. Please allow microphone access and refresh the page.');
+        break;
+      case 'no-speech':
+        setVoiceFeedback('❌ No speech detected. Please speak clearly and try again.');
+        // Auto-retry after 2 seconds
+        setTimeout(() => {
+          if (!isVoiceListening) {
+            setVoiceFeedback('Click microphone to try again');
+          }
+        }, 2000);
+        break;
+      case 'network':
+        setVoiceFeedback('❌ Network error. Please check your internet connection.');
+        break;
+      case 'audio-capture':
+        setVoiceFeedback('❌ No microphone found. Please check audio devices.');
+        break;
+      case 'service-not-allowed':
+        setVoiceFeedback('❌ Speech recognition service not allowed. Please check browser settings.');
+        break;
+      default:
+        setVoiceFeedback(`❌ Recognition error: ${error}. Please try again.`);
+    }
+  };
+
+  const processVoiceCommand = (text) => {
+    console.log('=== PROCESS VOICE COMMAND CALLED ===');
+    console.log('Original text:', text);
+    
+    const lowerText = text.toLowerCase().trim();
+    setVoiceFeedback(`Processing: "${text}"`);
+    console.log('Lower text:', lowerText);
+
+    // Simple keyword matching - this should work!
+    if (lowerText.includes('airport')) {
+      console.log('✅ AIRPORT DETECTED');
+      const airportPlace = 'Airport';
+      handlePlaceSelect(airportPlace);
+      setSearch('airport');
+      setVoiceFeedback(`✅ Finding parking at Airport`);
+      console.log('Airport command executed');
+      return;
+    }
+
+    if (lowerText.includes('history')) {
+      console.log('✅ HISTORY DETECTED');
+      setVoiceFeedback(`✅ Showing parking history`);
+      alert('📋 Parking History:\n• City Mall - 2 hours - ₹100\n• Airport - 3 hours - ₹150\n• Tech Park - 1 hour - ₹60');
+      console.log('History command executed');
+      return;
+    }
+
+    if (lowerText.includes('slots')) {
+      console.log('✅ SLOTS DETECTED');
+      setVoiceFeedback(`✅ ${availableSlots} slots available`);
+      alert(`🅿️ ${availableSlots} slots available out of ${TOTAL_SLOTS}`);
+      console.log('Slots command executed');
+      return;
+    }
+
+    // Try regex patterns as backup
+    console.log('Trying regex patterns...');
+    
+    if (lowerText.includes('find') && lowerText.includes('parking')) {
+      console.log('✅ PARKING FIND DETECTED');
+      setVoiceFeedback(`✅ Looking for parking...`);
+      // Try to extract location
+      if (lowerText.includes('airport')) {
+        handlePlaceSelect('Airport');
+        setSearch('airport');
+        setVoiceFeedback(`✅ Finding parking at Airport`);
+      } else if (lowerText.includes('city mall')) {
+        handlePlaceSelect('City Mall');
+        setSearch('city mall');
+        setVoiceFeedback(`✅ Finding parking at City Mall`);
+      } else if (lowerText.includes('tech park')) {
+        handlePlaceSelect('Tech Park');
+        setSearch('tech park');
+        setVoiceFeedback(`✅ Finding parking at Tech Park`);
+      }
+      return;
+    }
+
+    setVoiceFeedback('❌ Command not recognized. Try: "airport", "history", or "slots"');
+    console.log('❌ No command matched for:', text);
+    console.log('=== PROCESS VOICE COMMAND FINISHED ===');
+  };
+
+  const toggleVoiceListening = () => {
+    if (isVoiceListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsVoiceListening(false);
+      setVoiceFeedback('Listening stopped');
+    } else {
+      if (!recognitionRef.current) {
+        recognitionRef.current = initializeSpeechRecognition();
+      }
+      
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+          setIsVoiceListening(true);
+          setVoiceFeedback('🎤 Listening...');
+        } catch (error) {
+          console.error('Error starting recognition:', error);
+          setVoiceFeedback('Error starting microphone');
+        }
+      }
+    }
+  };
+
+  // Initialize speech recognition on component mount
+  useEffect(() => {
+    const recognition = initializeSpeechRecognition();
+    recognitionRef.current = recognition;
+
+    return () => {
+      if (recognition) {
+        recognition.stop();
+      }
+    };
+  }, []);
 
   // ===== CONFIRM BOOKING WITH PAYMENT =====
   const handleConfirmBookingWithPayment = () => {
@@ -428,6 +647,89 @@ export default function UserDashboard() {
               <MapPin size={18} className="text-emerald-400" />
               Use My Location
             </motion.button>
+          </div>
+
+          {/* ===== VOICE COMMANDS SECTION ===== */}
+          <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-3xl p-6 border border-emerald-100/50 shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg">
+                  <Mic className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">Voice Commands</h3>
+                  <p className="text-sm text-slate-600">Control parking with your voice</p>
+                </div>
+              </div>
+              
+              <motion.button
+                onClick={toggleVoiceListening}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`
+                  relative w-14 h-14 rounded-full transition-all duration-200
+                  ${isVoiceListening 
+                    ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
+                    : 'bg-emerald-500 hover:bg-emerald-600'
+                  }
+                  text-white shadow-lg focus:outline-none focus:ring-4
+                  ${isVoiceListening ? 'focus:ring-red-300' : 'focus:ring-emerald-300'}
+                `}
+                aria-label={isVoiceListening ? 'Stop listening' : 'Start listening'}
+              >
+                {isVoiceListening ? (
+                  <svg className="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 24 24">
+                    <rect x="6" y="6" width="12" height="12" />
+                  </svg>
+                ) : (
+                  <Mic className="w-6 h-6 mx-auto" />
+                )}
+                
+                {isVoiceListening && (
+                  <div className="absolute inset-0 rounded-full border-4 border-red-300 animate-ping"/>
+                )}
+              </motion.button>
+            </div>
+
+            {/* Voice Feedback */}
+            <div className="space-y-3">
+              <div className="bg-white/70 rounded-xl p-3 border border-emerald-100/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-700">Status:</span>
+                  <span className={`text-sm font-bold ${
+                    isVoiceListening ? 'text-red-600' : 'text-slate-600'
+                  }`}>
+                    {voiceFeedback}
+                  </span>
+                </div>
+              </div>
+
+              {voiceCommand && (
+                <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-200/50">
+                  <div className="text-sm font-medium text-emerald-700 mb-1">
+                    Recognized:
+                  </div>
+                  <div className="text-slate-800 font-medium">
+                    "{voiceCommand}"
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Command Examples */}
+            <div className="mt-4 p-3 bg-white/50 rounded-xl border border-emerald-100/30">
+              <h4 className="text-xs font-bold text-slate-700 mb-2">
+                🎤 Try saying:
+              </h4>
+              <ul className="space-y-1 text-xs text-slate-600">
+                <li>• "Find me a parking spot near City Mall"</li>
+                <li>• "Find me a parking spot at airport"</li>
+                <li>• "Extend my booking by 1 hour"</li>
+                <li>• "Show my parking history" → Navigates to History</li>
+                <li>• "Book a parking spot"</li>
+                <li>• "Show available slots"</li>
+              </ul>
+            </div>
           </div>
 
           {/* PLACE CARDS */}
