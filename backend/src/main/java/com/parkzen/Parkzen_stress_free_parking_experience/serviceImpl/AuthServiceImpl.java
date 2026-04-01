@@ -1,7 +1,9 @@
 package com.parkzen.Parkzen_stress_free_parking_experience.serviceImpl;
 
 
+import com.parkzen.Parkzen_stress_free_parking_experience.config.JwtUtil;
 import com.parkzen.Parkzen_stress_free_parking_experience.dto.LoginRequest;
+import com.parkzen.Parkzen_stress_free_parking_experience.dto.LoginResponse;
 import com.parkzen.Parkzen_stress_free_parking_experience.dto.RegisterOwnerRequest;
 import com.parkzen.Parkzen_stress_free_parking_experience.dto.RegisterUserRequest;
 import com.parkzen.Parkzen_stress_free_parking_experience.entity.Parking;
@@ -26,6 +28,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired
     private ParkingRepository parkingRepository;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @Override
     public User registerUser(RegisterUserRequest request) {
@@ -88,7 +93,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public User login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request) {
 
         Optional<User> userOptional = userRepository.findByEmail(request.getEmailOrMobile());
 
@@ -106,6 +111,8 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Invalid password");
         }
 
-        return user;
+        String token = jwtUtil.generateToken(user.getEmail());
+
+        return new LoginResponse(token);
     }
 }

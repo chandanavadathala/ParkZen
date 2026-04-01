@@ -1,6 +1,7 @@
 package com.parkzen.Parkzen_stress_free_parking_experience.controller;
 
 import com.parkzen.Parkzen_stress_free_parking_experience.dto.LoginRequest;
+import com.parkzen.Parkzen_stress_free_parking_experience.dto.LoginResponse;
 import com.parkzen.Parkzen_stress_free_parking_experience.dto.RegisterOwnerRequest;
 import com.parkzen.Parkzen_stress_free_parking_experience.dto.RegisterUserRequest;
 import com.parkzen.Parkzen_stress_free_parking_experience.entity.User;
@@ -42,7 +43,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
 
-        User user = authService.login(request);
+        LoginResponse user = authService.login(request);
 
         return ResponseEntity.ok(user);
     }

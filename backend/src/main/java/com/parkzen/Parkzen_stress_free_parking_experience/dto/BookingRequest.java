@@ -10,13 +10,15 @@ import java.time.LocalDateTime;
 public class BookingRequest {
 
     private Long userId;
-
+    private Long parkingId;
     private Long slotId;
-
+    private String vehicleSize;
     private String vehicleNumber;
-
+    private String slotType;
     private LocalDateTime startTime;
-
     private LocalDateTime endTime;
+
+
+
 
 }
