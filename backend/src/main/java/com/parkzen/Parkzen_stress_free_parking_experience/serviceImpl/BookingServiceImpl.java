@@ -31,16 +31,25 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public Booking createBooking(BookingRequest request) {
 
+        // 1. Fetch User
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // 2. Fetch Slot
         Slot slot = slotRepository.findById(request.getSlotId())
                 .orElseThrow(() -> new RuntimeException("Slot not found"));
 
-        if (!slot.getStatus().name().equals("AVAILABLE")) {
+        // 3. Check Slot Availability (BEST PRACTICE ✅)
+        if (slot.getStatus() != SlotStatus.AVAILABLE) {
             throw new RuntimeException("Slot not available");
         }
 
+        // 4. Validate Time
+        if (request.getStartTime().isAfter(request.getEndTime())) {
+            throw new RuntimeException("Invalid time range");
+        }
+
+        // 5. Create Booking
         Booking booking = Booking.builder()
                 .vehicleNumber(request.getVehicleNumber())
                 .startTime(request.getStartTime())
@@ -51,15 +60,20 @@ public class BookingServiceImpl implements BookingService {
                 .slot(slot)
                 .build();
 
+        // 6. Update Slot Status
         slot.setStatus(SlotStatus.BOOKED);
-
         slotRepository.save(slot);
 
+        // 7. Save Booking
         return bookingRepository.save(booking);
     }
 
     @Override
     public List<Booking> getUserBookings(Long userId) {
+
+        // Optional improvement (safe check)
+        userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         return bookingRepository.findByUserId(userId);
     }
