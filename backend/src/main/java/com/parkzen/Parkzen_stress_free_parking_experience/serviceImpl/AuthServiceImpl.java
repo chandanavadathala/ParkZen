@@ -111,8 +111,18 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Invalid password");
         }
 
+        Long parkingId = null;
+
+        if (user.getRole().name().equals("OWNER")) {
+            Parking parking = parkingRepository.findByOwner(user)
+                    .orElse(null);
+
+            if (parking != null) {
+                parkingId = parking.getId();
+            }
+        }
         String token = jwtUtil.generateToken(user.getEmail());
 
-        return new LoginResponse(token);
+        return new LoginResponse(token, user.getRole().name(),parkingId);
     }
 }

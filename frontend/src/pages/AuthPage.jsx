@@ -9,6 +9,12 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [vehicleNumber, setVehicleNumber] = useState("");
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
+
+  // Owner-specific fields
+  const [parkingName, setParkingName] = useState("");
+  const [parkingAddress, setParkingAddress] = useState("");
 
   // Hidden state for admin access
   const [adminClickCount, setAdminClickCount] = useState(0);
@@ -28,49 +34,153 @@ export default function AuthPage() {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (!mobile || mobile.length !== 10) {
-      alert("Enter a valid 10-digit mobile number");
-      return;
+  const handleGetCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          setLatitude(latitude);
+          setLongitude(longitude);
+          
+          try {
+            // Use reverse geocoding to get address from coordinates
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+            );
+            const data = await response.json();
+            
+            if (data && data.display_name) {
+              setParkingAddress(data.display_name);
+              alert("Location captured successfully!");
+            } else {
+              // Fallback to coordinates if address not found
+              setParkingAddress(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+              alert("Location captured (coordinates only)");
+            }
+          } catch (error) {
+            // If geocoding fails, use coordinates
+            setParkingAddress(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+            alert("Location captured (coordinates only)");
+            console.error("Geocoding error:", error);
+          }
+        },
+        (error) => {
+          alert("Unable to retrieve location. Please enter manually.");
+          console.error("Geolocation error:", error);
+        }
+      );
+    } else {
+      alert("Geolocation is not supported by your browser");
     }
-
-    if (!password) {
-      alert("Enter your password");
-      return;
-    }
-
-    // Admin redirection logic
-    if (role === "admin") {
-      navigate("/admin/dashboard", {
-        state: { mobile, password, role: "admin" },
-      });
-      return;
-    }
-
-    if (mode === "signup" && !name.trim()) {
-      alert("Enter your full name");
-      return;
-    }
-
-    if (mode === "signup" && role === "user" && !vehicleNumber.trim()) {
-      alert("Enter your vehicle number");
-      return;
-    }
-
-    // Normal flow for User/Owner
-    navigate("/verify-otp", {
-      state: {
-        name,
-        mobile,
-        email,
-        password,
-        role,
-        ...(role === "user" && { vehicleNumber }),
-      },
-    });
   };
+
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  if (!mobile || mobile.length !== 10) {
+    alert("Enter valid mobile number");
+    return;
+  }
+
+  if (!password) {
+    alert("Enter password");
+    return;
+  }
+
+  try {
+    // 🔐 LOGIN
+    if (mode === "login") {
+      const response = await fetch("http://localhost:8080/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          emailOrMobile: email || mobile,
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      // ✅ Save token + role
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("parkingId", data.parkingId);
+      localStorage.setItem("role", data.role);
+
+      alert("Login successful!");
+
+      // 🔥 Role-based navigation
+      if (data.role === "ADMIN") {
+        navigate("/admin/dashboard");
+      } else if (data.role === "OWNER") {
+        navigate("/owner/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
+    }
+
+    // 📝 SIGNUP
+    else {
+      const url =
+        role === "owner"
+          ? "http://localhost:8080/api/auth/register/owner"
+          : "http://localhost:8080/api/auth/register/user";
+
+      const body =
+        role === "owner"
+          ? {
+              fullName: name,
+              mobile,
+              email,
+              password,
+              parkingName,
+              parkingAddress,
+              latitude: latitude,
+             longitude: longitude,
+            }
+          : {
+              fullName: name,
+              mobile,
+              email,
+              password,
+              vehicleNumber,
+            };
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Registration failed");
+      }
+
+      alert("Registration successful!");
+
+      // 🔥 Go to OTP page
+      navigate("/verify-otp", {
+        state: {
+          role,
+          mobile,
+          email,
+        },
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    alert(err.message);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-slate-100 font-sans p-4">
@@ -152,6 +262,47 @@ export default function AuthPage() {
               />
             )}
 
+            {/* OWNER-SPECIFIC FIELDS */}
+            {mode === "signup" && role === "owner" && (
+              <>
+                <input
+                  type="text"
+                  placeholder="Parking Name"
+                  value={parkingName}
+                  onChange={(e) => setParkingName(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-400 outline-none"
+                />
+
+                <input
+                  type="text"
+                  placeholder="Parking Address"
+                  value={parkingAddress}
+                  onChange={(e) => setParkingAddress(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-400 outline-none"
+                />
+
+                <button
+                  type="button"
+                  onClick={handleGetCurrentLocation}
+                  className="w-full py-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition flex items-center justify-center gap-2"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Get Current Location
+                </button>
+              </>
+            )}
+
             {/* VEHICLE NUMBER (Signup only for User) */}
             {mode === "signup" && role === "user" && (
               <input
@@ -213,7 +364,7 @@ export default function AuthPage() {
           {/* SWITCH MODE */}
           <div className="text-center text-sm mt-6 text-gray-600">
             {mode === "login"
-              ? "Don’t have an account?"
+              ? "Don't have an account?"
               : "Already have an account?"}
             <button
               type="button"

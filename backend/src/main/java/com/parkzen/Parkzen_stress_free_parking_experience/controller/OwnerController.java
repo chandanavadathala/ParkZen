@@ -51,7 +51,7 @@ public class OwnerController {
     }
 
     @GetMapping("/dashboard/{parkingId}")
-    public List<OwnerSlotDashboardResponse> getDashboard(@PathVariable Long parkingId) {
+    public List<OwnerSlotDashboardResponse> getDashboard(@PathVariable("parkingId") Long parkingId) {
 
         return ownerService.getDashboardSlots(parkingId);
     }
@@ -63,13 +63,13 @@ public class OwnerController {
     }
 
     @GetMapping("/bookings/{parkingId}")
-    public List<Booking> getOwnerBookings(@PathVariable Long parkingId) {
+    public List<Booking> getOwnerBookings(@PathVariable("parkingId") Long parkingId) {
 
         return ownerService.getOwnerBookings(parkingId);
     }
 
     @GetMapping("/payments/{parkingId}")
-    public List<Payment> getOwnerPayments(@PathVariable Long parkingId) {
+    public List<Payment> getOwnerPayments(@PathVariable("parkingId") Long parkingId)  {
 
         return ownerService.getOwnerPayments(parkingId);
     }

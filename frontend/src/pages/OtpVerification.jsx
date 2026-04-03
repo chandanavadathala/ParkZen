@@ -16,22 +16,15 @@ export default function OtpVerification() {
       alert("Enter valid 6-digit OTP");
       return;
     }
+      alert("OTP verified!");
 
-    const userData = {
-      isAuthenticated: true,
-      role,
-      mobile,
-    };
+  const role = location.state.role;
 
-    login(userData);
-
-    if (role === "admin") {
-      navigate("/admin/dashboard");
-    } else if (role === "owner") {
-      navigate("/owner/dashboard");
-    } else {
-      navigate("/dashboard");
-    }
+  if (role === "owner") {
+    navigate("/owner/dashboard");
+  } else {
+    navigate("/dashboard");
+  }
   };
 
   return (
