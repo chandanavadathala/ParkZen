@@ -1,107 +1,183 @@
-import React, { useState } from "react";
-import { TrendingUp, DollarSign, Wallet, ArrowDownCircle } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { TrendingUp, Wallet, ArrowDownCircle } from "lucide-react";
 
-const RevenueManagement = ({ bookings }) => {
-  // 1. STATE FOR CALCULATIONS
-  const [availableBalance, setAvailableBalance] = useState(3210.0);
-  const [totalWithdrawn, setTotalWithdrawn] = useState(9240.0);
+const RevenueManagement = () => {
+  const [payments, setPayments] = useState([]);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [availableBalance, setAvailableBalance] = useState(0);
+  const [totalWithdrawn, setTotalWithdrawn] = useState(0);
 
-  // Calculate revenue from Paid bookings
-  const paidBookings = bookings.filter((b) => b.payment === "Paid");
-  const totalRevenue = paidBookings.reduce((sum, _) => sum + 25, 0);
+  useEffect(() => {
+    fetchPayments();
+    fetchRevenue();
+  }, []);
 
-  // 2. THE BUTTON LOGIC
+  // 🔥 FETCH PAYMENTS
+  const fetchPayments = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const parkingId = localStorage.getItem("parkingId");
+
+      const response = await fetch(
+        `http://localhost:8080/api/owner/payments/${parkingId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!Array.isArray(data)) {
+        console.error("Invalid payment data", data);
+        return;
+      }
+
+      setPayments(data);
+
+      // 🔥 calculate revenue from SUCCESS payments
+      const successPayments = data.filter(
+        (p) => p.paymentStatus === "SUCCESS"
+      );
+
+      const total = successPayments.reduce(
+        (sum, p) => sum + p.amount,
+        0
+      );
+
+      setTotalRevenue(total);
+      setAvailableBalance(total); // simple logic for now
+
+    } catch (error) {
+      console.error("Payment fetch error:", error);
+    }
+  };
+
+  // 🔥 FETCH REVENUE (optional if backend gives total)
+  const fetchRevenue = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const parkingId = localStorage.getItem("parkingId");
+
+      const response = await fetch(
+        `http://localhost:8080/api/owner/revenue/${parkingId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+      console.log("Revenue API:", data);
+
+    } catch (error) {
+      console.error("Revenue error:", error);
+    }
+  };
+
+  // 🔥 WITHDRAW BUTTON
   const handleRequestPayout = () => {
     if (availableBalance > 0) {
-      alert(`Success! $${availableBalance} has been sent to your bank.`);
-      setTotalWithdrawn((prev) => prev + availableBalance); // Move money to Withdrawn
-      setAvailableBalance(0); // Reset available balance
+      alert(`Success! $${availableBalance} withdrawn.`);
+      setTotalWithdrawn((prev) => prev + availableBalance);
+      setAvailableBalance(0);
     } else {
-      alert("No funds available to withdraw.");
+      alert("No funds available.");
     }
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6">
+      {/* CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* CARD 1: TOTAL EARNED */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-          <h3 className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">
+
+        {/* TOTAL EARNED */}
+        <div className="bg-white p-6 rounded-3xl border shadow-sm">
+          <h3 className="text-[10px] font-bold text-slate-500 uppercase">
             Total Earned
           </h3>
           <p className="text-3xl font-black text-slate-900">
-            ${totalRevenue.toLocaleString()}.00
+            ${totalRevenue.toFixed(2)}
           </p>
-          <div className="text-emerald-500 text-[10px] font-bold mt-2 flex items-center gap-1">
-            <TrendingUp size={12} /> +12% growth
-          </div>
         </div>
 
-        {/* CARD 2: TOTAL WITHDRAWN */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm border-l-4 border-l-blue-500">
-          <h3 className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">
+        {/* WITHDRAWN */}
+        <div className="bg-white p-6 rounded-3xl border shadow-sm border-l-4 border-blue-500">
+          <h3 className="text-[10px] font-bold text-slate-500 uppercase">
             Total Withdrawn
           </h3>
           <p className="text-3xl font-black text-blue-600">
-            ${totalWithdrawn.toLocaleString()}.00
+            ${totalWithdrawn.toFixed(2)}
           </p>
-          <div className="text-slate-400 text-[10px] font-medium mt-2 flex items-center gap-1">
+          <div className="text-slate-400 text-[10px] mt-2 flex items-center gap-1">
             <ArrowDownCircle size={12} /> Lifetime Transfers
           </div>
         </div>
 
-        {/* CARD 3: AVAILABLE & ACTION */}
-        <div className="bg-slate-900 p-6 rounded-3xl shadow-xl flex flex-col justify-between">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h3 className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-                Available
-              </h3>
-              <p className="text-2xl font-bold text-white">
-                ${availableBalance.toLocaleString()}.00
-              </p>
-            </div>
-            <Wallet className="text-blue-400 opacity-50" size={24} />
+        {/* AVAILABLE */}
+        <div className="bg-slate-900 p-6 rounded-3xl flex flex-col justify-between">
+          <div>
+            <h3 className="text-[10px] text-slate-400 uppercase">
+              Available
+            </h3>
+            <p className="text-2xl text-white font-bold">
+              ${availableBalance.toFixed(2)}
+            </p>
           </div>
+
           <button
             onClick={handleRequestPayout}
             disabled={availableBalance === 0}
-            className={`w-full py-3 rounded-2xl font-black transition text-sm ${
+            className={`mt-4 py-3 rounded-xl font-bold ${
               availableBalance > 0
-                ? "bg-blue-600 text-white hover:bg-blue-500 active:scale-95"
-                : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-700 text-gray-400"
             }`}
           >
-            {availableBalance > 0 ? "Withdraw to Bank" : "Funds Withdrawn"}
+            Withdraw to Bank
           </button>
         </div>
       </div>
 
-      {/* TRANSACTION TABLE (Same as before) */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-50">
-          <h4 className="font-black text-slate-800 text-sm uppercase">
+      {/* PAYMENT TABLE */}
+      <div className="bg-white rounded-3xl border shadow-sm overflow-hidden">
+        <div className="p-4 border-b">
+          <h4 className="font-bold text-sm uppercase">
             Payment History
           </h4>
         </div>
+
         <table className="w-full text-left">
-          <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          <thead className="bg-slate-50 text-xs text-slate-400 uppercase">
             <tr>
               <th className="p-4">User</th>
               <th className="p-4">Amount</th>
               <th className="p-4 text-right">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
-            {paidBookings.map((b, i) => (
-              <tr key={i}>
-                <td className="p-4 font-bold text-slate-700 text-sm">
-                  {b.user}
+
+          <tbody>
+            {payments.map((p) => (
+              <tr key={p.id}>
+                <td className="p-4 font-bold">
+                  {p.booking?.user?.fullName || "N/A"}
                 </td>
-                <td className="p-4 text-sm font-black">$25.00</td>
+
+                <td className="p-4 font-black">
+                  ${p.amount}
+                </td>
+
                 <td className="p-4 text-right">
-                  <span className="text-emerald-500 text-[10px] font-black uppercase">
-                    Completed
+                  <span
+                    className={`text-xs font-bold ${
+                      p.paymentStatus === "SUCCESS"
+                        ? "text-green-500"
+                        : "text-red-500"
+                    }`}
+                  >
+                    {p.paymentStatus}
                   </span>
                 </td>
               </tr>

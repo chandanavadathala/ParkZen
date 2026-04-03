@@ -56,6 +56,7 @@ public class OwnerServiceImpl implements OwnerService {
 
         return slotRepository.findByParkingId(parkingId);
     }
+    
 
     @Override
     public Slot updateSlotStatus(UpdateSlotStatusRequest request) {
@@ -107,18 +108,22 @@ public class OwnerServiceImpl implements OwnerService {
     @Override
     public List<Payment> getOwnerPayments(Long parkingId) {
 
-        return paymentRepository.findByBookingSlotParkingId(parkingId);
+        return paymentRepository.findByParkingId(parkingId);
     }
 
     @Override
     public Double getOwnerRevenue(Long parkingId) {
 
-        List<Payment> payments = paymentRepository.findByBookingSlotParkingId(parkingId);
+        List<Payment> payments = paymentRepository.findByParkingId(parkingId);
 
         double total = 0;
 
         for (Payment payment : payments) {
-            total += payment.getAmount();
+
+            // 🔥 only count SUCCESS payments
+            if (payment.getPaymentStatus().name().equals("SUCCESS")) {
+                total += payment.getAmount();
+            }
         }
 
         return total;

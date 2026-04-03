@@ -587,40 +587,11 @@ const OwnerDashboard = () => {
   const basePrice = 50;
 
   // --- MOCK DATA STATE ---
-  const [slots, setSlots] = useState([
-    {
-      id: 1,
-      name: "A-101",
-      type: "EV",
-      status: "occupied",
-      rate: 15,
-      isCovered: true,
-    },
-    {
-      id: 2,
-      name: "A-102",
-      type: "Open",
-      status: "available",
-      rate: 10,
-      isCovered: false,
-    },
-    {
-      id: 3,
-      name: "B-201",
-      type: "Covered",
-      status: "maintenance",
-      rate: 12,
-      isCovered: true,
-    },
-    {
-      id: 4,
-      name: "VIP-1",
-      type: "Covered",
-      status: "booked",
-      rate: 25,
-      isCovered: true,
-    },
-  ]);
+ const [slots, setSlots] = useState([]);
+ 
+    useEffect(() => {
+      fetchDashboard();
+    }, []);
 
   const [bookings, setBookings] = useState([
     {
@@ -667,6 +638,63 @@ const OwnerDashboard = () => {
     }
   }, [activeTab]);
 
+  const fetchDashboard = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const parkingId = localStorage.getItem("parkingId"); 
+    
+    // IMPORTANT
+
+    const response = await fetch(
+      `http://localhost:8080/api/owner/dashboard/${parkingId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+        if (!Array.isArray(data)) {
+      console.error("Invalid data:", data);
+      return;
+    }
+    // 🔥 MAP BACKEND → FRONTEND FORMAT
+    const formatted = data.map((item) => ({
+      id: item.slotId,
+      name: item.slotNumber,
+      type: item.slotType,
+      status: item.status.toLowerCase(), // IMPORTANT
+      rate: item.price,
+    }));
+
+    setSlots(formatted);
+  } catch (error) {
+    console.error("Error fetching dashboard:", error);
+  }
+};
+
+const updateSlotStatus = async (slotId, status) => {
+  try {
+    const token = localStorage.getItem("token");
+
+    await fetch("http://localhost:8080/api/owner/update-slot-status", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        slotId: slotId,
+        status: status,
+      }),
+    });
+
+    fetchDashboard(); // 🔥 refresh UI
+  } catch (error) {
+    console.error("Error updating slot:", error);
+  }
+};
   const handleProcessQR = (idFromQR) => {
     // 1. Clean the scanned text (in case of spaces or hidden characters)
     const cleanId = idFromQR.trim();
@@ -1203,7 +1231,12 @@ const OwnerDashboard = () => {
                   <p>Rate: ${slot.rate}/hr</p>
                 </div>
                 <button
-                  onClick={() => toggleGate(slot.id)}
+                  onClick={() =>
+  updateSlotStatus(
+    slot.id,
+    slot.status === "available" ? "OCCUPIED" : "AVAILABLE"
+  )
+}
                   className="mt-4 w-full py-2 bg-gray-50 text-gray-700 text-sm rounded border hover:bg-gray-100 font-medium"
                 >
                   {slot.status === "available"

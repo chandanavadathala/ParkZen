@@ -10,20 +10,63 @@ export default function AddSlotModal({ onAdd, onClose }) {
     isCovered: false,
   });
 
-  const handleAdd = () => {
-    if (!newSlot.name || !newSlot.rate)
-      return alert("Please fill slot name and rate.");
-    onAdd({
-      id: Date.now(),
-      name: newSlot.name,
-      type: newSlot.type,
-      size: newSlot.size,
-      status: "available",
-      rate: parseInt(newSlot.rate),
-      isCovered: newSlot.isCovered,
+ const handleAdd = async () => {
+  if (!newSlot.name || !newSlot.rate) {
+    return alert("Please fill slot name and rate.");
+  }
+
+  try {
+    const token = localStorage.getItem("token");
+    const parkingId = localStorage.getItem("parkingId");
+
+    // 🔥 MAP UI → BACKEND ENUMS
+    const vehicleSizeMap = {
+      Small: "S",
+      Medium: "M",
+      Large: "L",
+      XL: "XL",
+    };
+
+    const slotTypeMap = {
+      Open: "OPEN",
+      Covered: "COVERED",
+      EV: "EV",
+      Accessible: "ACCESSIBLE",
+    };
+
+    const response = await fetch("http://localhost:8080/api/owner/add-slot", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        parkingId: parkingId,
+        slotNumber: newSlot.name,
+        vehicleSize: vehicleSizeMap[newSlot.size],   // 🔥 IMPORTANT
+        slotType: slotTypeMap[newSlot.type],         // 🔥 IMPORTANT
+        ratePerHour: parseFloat(newSlot.rate),       // 🔥 IMPORTANT
+      }),
     });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to add slot");
+    }
+
+    alert("Slot added successfully ✅");
+
     onClose();
-  };
+
+    // 🔥 refresh dashboard (call parent)
+    window.location.reload(); // simple for now
+
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
+  }
+};
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">

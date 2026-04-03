@@ -23,8 +23,9 @@ public interface OwnerService {
 
     List<Booking> getOwnerBookings(Long parkingId);
 
-    List<Payment> getOwnerPayments(Long parkingId);
+     List<Payment> getOwnerPayments(Long parkingId);
 
     Double getOwnerRevenue(Long parkingId);
+
 
 }

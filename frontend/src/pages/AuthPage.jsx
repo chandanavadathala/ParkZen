@@ -9,6 +9,9 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [vehicleNumber, setVehicleNumber] = useState("");
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
+
   
   // Owner-specific fields
   const [parkingName, setParkingName] = useState("");
@@ -37,6 +40,8 @@ export default function AuthPage() {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
+          setLatitude(latitude);
+          setLongitude(longitude);
           
           try {
             // Use reverse geocoding to get address from coordinates
@@ -77,28 +82,56 @@ export default function AuthPage() {
       alert("Enter a valid 10-digit mobile number");
       return;
     }
+  };
 
-    if (!password) {
-      alert("Enter your password");
-      return;
-    }
+  const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    // Admin redirection logic
-    if (role === "admin") {
-      navigate("/admin/dashboard", {
-        state: { mobile, password, role: "admin" },
+  if (!mobile || mobile.length !== 10) {
+    alert("Enter valid mobile number");
+    return;
+  }
+
+  if (!password) {
+    alert("Enter password");
+    return;
+  }
+
+  try {
+    // 🔐 LOGIN
+    if (mode === "login") {
+      const response = await fetch("http://localhost:8080/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          emailOrMobile: email || mobile,
+          password: password,
+        }),
       });
-      return;
-    }
 
-    if (mode === "signup" && !name.trim()) {
-      alert("Enter your full name");
-      return;
-    }
+      const data = await response.json();
 
-    if (mode === "signup" && role === "user" && !vehicleNumber.trim()) {
-      alert("Enter your vehicle number");
-      return;
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      // ✅ Save token + role
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("parkingId", data.parkingId);
+      localStorage.setItem("role", data.role);
+
+      alert("Login successful!");
+
+      // 🔥 Role-based navigation
+      if (data.role === "ADMIN") {
+        navigate("/admin/dashboard");
+      } else if (data.role === "OWNER") {
+        navigate("/owner/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
     }
 
     // Owner-specific validations
