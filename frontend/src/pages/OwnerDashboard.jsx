@@ -25,9 +25,552 @@ import {
   CheckCircle2,
   XCircle,
   Search,
-  MessageSquare, // <--- ADD THIS
-  Star, // <--- ADD THIS
+  MessageSquare,
+  Star,
+  User,
+  Phone,
+  Mail,
+  Building,
+  Camera,
+  FileText,
+  ArrowRight,
 } from "lucide-react";
+
+// Owner Registration Component
+const OwnerRegistration = ({ onComplete }) => {
+  const [formData, setFormData] = useState({
+    parkingName: '',
+    ownerName: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    totalSlots: '',
+    parkingType: 'open',
+    description: '',
+    amenities: {
+      cctv: false,
+      security: false,
+      lighting: false,
+      covered: false,
+      evCharging: false,
+      wheelchair: false,
+    },
+    pricing: {
+      hourly: '',
+      daily: '',
+      weekly: '',
+      monthly: '',
+    },
+    operatingHours: {
+      monday: { open: '09:00', close: '18:00', closed: false },
+      tuesday: { open: '09:00', close: '18:00', closed: false },
+      wednesday: { open: '09:00', close: '18:00', closed: false },
+      thursday: { open: '09:00', close: '18:00', closed: false },
+      friday: { open: '09:00', close: '18:00', closed: false },
+      saturday: { open: '09:00', close: '18:00', closed: false },
+      sunday: { open: '09:00', close: '18:00', closed: false },
+    },
+    documents: {
+      registration: null,
+      insurance: null,
+      ownership: null,
+    }
+  });
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const [location, setLocation] = useState({ lat: '', lng: '' });
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: type === 'checkbox' ? checked : value
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
+    }
+  };
+
+  const handleLocationClick = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          alert('Unable to get your location. Please enter manually.');
+        }
+      );
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log('Owner Registration Data:', { ...formData, location });
+    alert('Parking registration successful! 🎉');
+    onComplete();
+  };
+
+  const renderStep = () => {
+    switch(currentStep) {
+      case 1:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Building className="w-10 h-10 text-emerald-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-800">Basic Information</h2>
+              <p className="text-slate-500">Tell us about your parking facility</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Parking Name *
+                </label>
+                <input
+                  type="text"
+                  name="parkingName"
+                  value={formData.parkingName}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder="e.g., City Center Parking"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Owner Name *
+                </label>
+                <input
+                  type="text"
+                  name="ownerName"
+                  value={formData.ownerName}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder="john@example.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Phone Number *
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder="+1 (555) 123-4567"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Parking Address *
+              </label>
+              <textarea
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                rows="3"
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                placeholder="123 Main Street, City, State"
+                required
+              />
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  City *
+                </label>
+                <input
+                  type="text"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder="New York"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  State *
+                </label>
+                <input
+                  type="text"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder="NY"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  ZIP Code *
+                </label>
+                <input
+                  type="text"
+                  name="zipCode"
+                  value={formData.zipCode}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder="10001"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MapPin className="w-10 h-10 text-blue-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-800">Location & Details</h2>
+              <p className="text-slate-500">Set your location and parking specifications</p>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-6 mb-6">
+              <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-emerald-600" />
+                Get Location
+              </h3>
+              <button
+                type="button"
+                onClick={handleLocationClick}
+                className="w-full bg-emerald-600 text-white py-3 rounded-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Camera className="w-5 h-5" />
+                Use Current Location
+              </button>
+              
+              {(location.lat || location.lng) && (
+                <div className="mt-4 p-3 bg-white rounded-lg border border-emerald-200">
+                  <p className="text-sm text-slate-600">
+                    <strong>Location Captured:</strong><br />
+                    Lat: {location.lat || 'N/A'}<br />
+                    Lng: {location.lng || 'N/A'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Total Parking Slots *
+                </label>
+                <input
+                  type="number"
+                  name="totalSlots"
+                  value={formData.totalSlots}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder="50"
+                  min="1"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Parking Type *
+                </label>
+                <select
+                  name="parkingType"
+                  value={formData.parkingType}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  required
+                >
+                  <option value="open">Open Parking</option>
+                  <option value="covered">Covered Parking</option>
+                  <option value="garage">Parking Garage</option>
+                  <option value="street">Street Parking</option>
+                  <option value="mixed">Mixed Type</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Description
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows="4"
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                placeholder="Describe your parking facility, special features, etc."
+              />
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-800 mb-4">Amenities</h3>
+              <div className="grid md:grid-cols-3 gap-4">
+                {Object.entries({
+                  cctv: 'CCTV Surveillance',
+                  security: 'Security Guard',
+                  lighting: '24/7 Lighting',
+                  covered: 'Covered Parking',
+                  evCharging: 'EV Charging Stations',
+                  wheelchair: 'Wheelchair Accessible'
+                }).map(([key, label]) => (
+                  <label key={key} className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name={`amenities.${key}`}
+                      checked={formData.amenities[key]}
+                      onChange={handleInputChange}
+                      className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
+                    />
+                    <span className="text-sm font-medium text-slate-700">{label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CreditCard className="w-10 h-10 text-green-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-800">Pricing & Documents</h2>
+              <p className="text-slate-500">Set your pricing and upload documents</p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-800 mb-4">Pricing Structure</h3>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Hourly Rate ($) *
+                  </label>
+                  <input
+                    type="number"
+                    name="pricing.hourly"
+                    value={formData.pricing.hourly}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder="5.00"
+                    step="0.01"
+                    min="0"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Daily Rate ($) *
+                  </label>
+                  <input
+                    type="number"
+                    name="pricing.daily"
+                    value={formData.pricing.daily}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder="25.00"
+                    step="0.01"
+                    min="0"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Weekly Rate ($)
+                  </label>
+                  <input
+                    type="number"
+                    name="pricing.weekly"
+                    value={formData.pricing.weekly}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder="150.00"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Monthly Rate ($)
+                  </label>
+                  <input
+                    type="number"
+                    name="pricing.monthly"
+                    value={formData.pricing.monthly}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder="500.00"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-800 mb-4">Required Documents</h3>
+              <div className="space-y-4">
+                {[
+                  { key: 'registration', label: 'Parking Registration Certificate', icon: FileText },
+                  { key: 'insurance', label: 'Insurance Certificate', icon: ShieldCheck },
+                  { key: 'ownership', label: 'Ownership Proof', icon: Building }
+                ].map(({ key, label, icon: Icon }) => (
+                  <div key={key} className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-emerald-400 transition-colors">
+                    <Icon className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-slate-700 mb-2">{label}</p>
+                    <input
+                      type="file"
+                      name={`documents.${key}`}
+                      onChange={handleInputChange}
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      className="hidden"
+                      id={`doc-${key}`}
+                    />
+                    <label
+                      htmlFor={`doc-${key}`}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors cursor-pointer"
+                    >
+                      <Camera className="w-4 h-4" />
+                      Upload Document
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 py-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+          {/* Progress Steps */}
+          <div className="bg-slate-50 px-8 py-6 border-b border-slate-200">
+            <div className="flex items-center justify-between">
+              {[1, 2, 3].map((step) => (
+                <div key={step} className="flex items-center">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
+                    currentStep >= step 
+                      ? 'bg-emerald-600 text-white' 
+                      : 'bg-slate-200 text-slate-500'
+                  }`}>
+                    {step}
+                  </div>
+                  {step < 3 && (
+                    <div className={`w-20 h-1 mx-2 ${
+                      currentStep > step ? 'bg-emerald-600' : 'bg-slate-200'
+                    }`} />
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between mt-4">
+              <span className="text-xs font-medium text-slate-500">Basic Info</span>
+              <span className="text-xs font-medium text-slate-500">Location</span>
+              <span className="text-xs font-medium text-slate-500">Pricing & Docs</span>
+            </div>
+          </div>
+
+          {/* Form Content */}
+          <form onSubmit={handleSubmit} className="p-8">
+            {renderStep()}
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between mt-8">
+              <button
+                type="button"
+                onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+                disabled={currentStep === 1}
+                className="px-6 py-3 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+
+              {currentStep < 3 ? (
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(currentStep + 1)}
+                  className="px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors flex items-center gap-2"
+                >
+                  Next Step
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="px-8 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors flex items-center gap-2"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  Complete Registration
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const OwnerDashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");

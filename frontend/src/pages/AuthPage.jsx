@@ -12,6 +12,7 @@ export default function AuthPage() {
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
 
+  
   // Owner-specific fields
   const [parkingName, setParkingName] = useState("");
   const [parkingAddress, setParkingAddress] = useState("");
@@ -74,6 +75,15 @@ export default function AuthPage() {
     }
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (!mobile || mobile.length !== 10) {
+      alert("Enter a valid 10-digit mobile number");
+      return;
+    }
+  };
+
   const handleSubmit = async (e) => {
   e.preventDefault();
 
@@ -124,63 +134,31 @@ export default function AuthPage() {
       }
     }
 
-    // 📝 SIGNUP
-    else {
-      const url =
-        role === "owner"
-          ? "http://localhost:8080/api/auth/register/owner"
-          : "http://localhost:8080/api/auth/register/user";
-
-      const body =
-        role === "owner"
-          ? {
-              fullName: name,
-              mobile,
-              email,
-              password,
-              parkingName,
-              parkingAddress,
-              latitude: latitude,
-             longitude: longitude,
-            }
-          : {
-              fullName: name,
-              mobile,
-              email,
-              password,
-              vehicleNumber,
-            };
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Registration failed");
+    // Owner-specific validations
+    if (mode === "signup" && role === "owner") {
+      if (!parkingName.trim()) {
+        alert("Enter your parking name");
+        return;
       }
-
-      alert("Registration successful!");
-
-      // 🔥 Go to OTP page
-      navigate("/verify-otp", {
-        state: {
-          role,
-          mobile,
-          email,
-        },
-      });
+      if (!parkingAddress.trim()) {
+        alert("Enter your parking address or use current location");
+        return;
+      }
     }
-  } catch (err) {
-    console.error(err);
-    alert(err.message);
-  }
-};
+
+    // Normal flow for User/Owner
+    navigate("/verify-otp", {
+      state: {
+        name,
+        mobile,
+        email,
+        password,
+        role,
+        ...(role === "user" && { vehicleNumber }),
+        ...(role === "owner" && { parkingName, parkingAddress }),
+      },
+    });
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-slate-100 font-sans p-4">
