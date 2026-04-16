@@ -1,0 +1,800 @@
+package com.parking.parking.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(authz -> authz
+                .anyRequest().permitAll()  // Allow all requests for testing
+            );
+
+        return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+--------------------------------------------------------------------------------------------------------------------------------
+package com.parking.parking.controller;
+
+import com.parking.parking.entity.User;
+import com.parking.parking.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/auth")
+public class AuthController {
+
+    @Autowired
+    private UserService userService;
+
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody User user) {
+        try {
+            User registeredUser = userService.registerUser(user);
+            return ResponseEntity.ok("User registered successfully: " + registeredUser.getUsername());
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
+        // For now, just return success if user exists
+        // In a real app, you'd use Spring Security for proper authentication
+        try {
+            User user = userService.findByUsername(loginRequest.getUsername());
+            return ResponseEntity.ok("Login successful for: " + user.getUsername());
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body("Invalid credentials");
+        }
+    }
+
+    public static class LoginRequest {
+        private String username;
+        private String password;
+
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
+    }
+}
+-----------------------------------------------------------------------------------------------------------------
+package com.parking.parking.controller;
+
+import com.parking.parking.entity.Booking;
+import com.parking.parking.entity.ParkingLocation;
+import com.parking.parking.repository.BookingRepository;
+import com.parking.parking.service.ParkingLocationService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/bookings")
+public class BookingController {
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
+    private ParkingLocationService parkingLocationService;
+
+    @PostMapping("/book")
+    public ResponseEntity<String> createBooking(@RequestParam Long userId, @RequestParam Long slotId, @RequestParam Long locationId, @RequestParam String startTime, @RequestParam String endTime) {
+        try {
+            Optional<ParkingLocation> locOpt = parkingLocationService.getLocationById(locationId);
+            if (locOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            ParkingLocation loc = locOpt.get();
+            int avail = loc.getAvailableSlots();
+            if (avail <= 0) {
+                return ResponseEntity.badRequest().body("No available slots");
+            }
+            // Create booking
+            LocalDateTime start = LocalDateTime.parse(startTime + ":00");
+            LocalDateTime end = LocalDateTime.parse(endTime + ":00");
+            Booking booking = new Booking(userId, slotId, locationId, start, end);
+            bookingRepository.save(booking);
+            // Decrement available slots
+            loc.setAvailableSlots(avail - 1);
+            parkingLocationService.save(loc);
+            return ResponseEntity.ok("Booking confirmed for slot " + slotId + " at " + loc.getName());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error creating booking: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Map<String, Object>>> getUserBookings(@PathVariable Long userId) {
+        List<Booking> bookings = bookingRepository.findByUserId(userId);
+        List<Map<String, Object>> bookingData = new ArrayList<>();
+        for (Booking booking : bookings) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", booking.getId());
+            map.put("userId", booking.getUserId());
+            map.put("slotId", booking.getSlotId());
+            map.put("locationId", booking.getLocationId());
+            // Fetch location name
+            Optional<ParkingLocation> locOpt = parkingLocationService.getLocationById(booking.getLocationId());
+            String locationName = locOpt.map(ParkingLocation::getName).orElse("Unknown");
+            map.put("locationName", locationName);
+            map.put("startTime", booking.getStartTime());
+            map.put("endTime", booking.getEndTime());
+            map.put("status", booking.getStatus());
+            bookingData.add(map);
+        }
+        return ResponseEntity.ok(bookingData);
+    }
+
+    @GetMapping("/slots/available/{locationId}")
+    public ResponseEntity<List<Map<String, Object>>> getAvailableSlots(@PathVariable Long locationId) {
+        Optional<ParkingLocation> locOpt = parkingLocationService.getLocationById(locationId);
+        if (locOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        ParkingLocation loc = locOpt.get();
+        int avail = loc.getAvailableSlots();
+        List<Map<String, Object>> slots = new ArrayList<>();
+        for (int i = 1; i <= avail; i++) {
+            Map<String, Object> slot = new HashMap<>();
+            slot.put("id", i);
+            slots.add(slot);
+        }
+        return ResponseEntity.ok(slots);
+    }
+}
+----------------------------------------------------------------------------------------------------
+package com.parking.parking.controller;
+
+import com.parking.parking.entity.ParkingLocation;
+import com.parking.parking.service.ParkingLocationService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/parking")
+public class ParkingController {
+
+    @Autowired
+    private ParkingLocationService parkingLocationService;
+
+    @GetMapping("/locations")
+    public ResponseEntity<List<ParkingLocation>> getAllLocations() {
+        List<ParkingLocation> locations = parkingLocationService.getAllLocations();
+        return ResponseEntity.ok(locations);
+    }
+
+    @GetMapping("/locations/{id}")
+    public ResponseEntity<ParkingLocation> getLocationById(@PathVariable Long id) {
+        Optional<ParkingLocation> location = parkingLocationService.getLocationById(id);
+        return location.map(ResponseEntity::ok)
+                      .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/search/city")
+    public ResponseEntity<List<ParkingLocation>> searchByCity(@RequestParam String city) {
+        List<ParkingLocation> locations = parkingLocationService.searchByCity(city);
+        return ResponseEntity.ok(locations);
+    }
+
+    @GetMapping("/search/city-state")
+    public ResponseEntity<List<ParkingLocation>> searchByCityAndState(@RequestParam String city,
+                                                                     @RequestParam String state) {
+        List<ParkingLocation> locations = parkingLocationService.searchByCityAndState(city, state);
+        return ResponseEntity.ok(locations);
+    }
+
+    @GetMapping("/search/nearby")
+    public ResponseEntity<List<ParkingLocation>> searchNearby(@RequestParam double latitude,
+                                                             @RequestParam double longitude,
+                                                             @RequestParam(defaultValue = "5.0") double radiusKm) {
+        List<ParkingLocation> locations = parkingLocationService.searchNearbyLocations(latitude, longitude, radiusKm);
+        return ResponseEntity.ok(locations);
+    }
+
+    @GetMapping("/search/available")
+    public ResponseEntity<List<ParkingLocation>> getAvailableLocations() {
+        List<ParkingLocation> locations = parkingLocationService.getAvailableLocations();
+        return ResponseEntity.ok(locations);
+    }
+
+    @GetMapping("/search/name")
+    public ResponseEntity<List<ParkingLocation>> searchByName(@RequestParam String name) {
+        List<ParkingLocation> locations = parkingLocationService.searchByName(name);
+        return ResponseEntity.ok(locations);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<ParkingLocation>> search(@RequestParam(required = false) String city,
+                                                        @RequestParam(required = false) String locationName) {
+        List<ParkingLocation> locations;
+
+        if (city != null && locationName != null) {
+            // Search by city and filter by name
+            locations = parkingLocationService.searchByCity(city).stream()
+                .filter(loc -> loc.getName().toLowerCase().contains(locationName.toLowerCase()))
+                .collect(java.util.stream.Collectors.toList());
+        } else if (city != null) {
+            locations = parkingLocationService.searchByCity(city);
+        } else if (locationName != null) {
+            locations = parkingLocationService.searchByName(locationName);
+        } else {
+            locations = parkingLocationService.getAllLocations();
+        }
+
+        return ResponseEntity.ok(locations);
+    }
+
+    @GetMapping("/cities")
+    public ResponseEntity<List<String>> getAllCities() {
+        List<String> cities = parkingLocationService.getAllCities();
+        return ResponseEntity.ok(cities);
+    }
+
+    @GetMapping("/location-names")
+    public ResponseEntity<List<String>> getAllLocationNames() {
+        List<String> names = parkingLocationService.getAllLocationNames();
+        return ResponseEntity.ok(names);
+    }
+
+    @PostMapping("/locations")
+    public ResponseEntity<ParkingLocation> createLocation(@RequestBody ParkingLocation location) {
+        ParkingLocation savedLocation = parkingLocationService.saveLocation(location);
+        return ResponseEntity.ok(savedLocation);
+    }
+}
+----------------------------------------------------------------------------------------------------------------
+package com.parking.parking.controller;
+
+import com.parking.parking.entity.User;
+import com.parking.parking.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+@Controller
+public class WebController {
+
+    @Autowired
+    private UserService userService;
+
+    @GetMapping("/register")
+    public String showRegisterForm() {
+        return "register";
+    }
+
+    @PostMapping("/register")
+    public String registerUser(User user, RedirectAttributes redirectAttributes) {
+        try {
+            userService.registerUser(user);
+            redirectAttributes.addFlashAttribute("successMessage",
+                "Account created successfully! Please login with your credentials.");
+            return "redirect:/login";
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/register";
+        }
+    }
+
+    @GetMapping("/login")
+    public String showLoginForm() {
+        return "login";
+    }
+
+    @PostMapping("/login")
+    public String loginUser(String username, String password,
+                           RedirectAttributes redirectAttributes) {
+        try {
+            User user = userService.findByUsername(username);
+            // In a real app, verify password here
+            redirectAttributes.addFlashAttribute("successMessage",
+                "Login successful! Welcome " + user.getFirstName());
+            return "redirect:/dashboard";
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Invalid username or password");
+            return "redirect:/login";
+        }
+    }
+
+    @GetMapping("/bookings")
+    public String showBookingsPage() {
+        return "bookings";
+    }
+
+    @GetMapping("/dashboard")
+    public String showDashboardPage() {
+        return "dashboard";
+    }
+
+    @GetMapping("/search")
+    public String showSearchPage() {
+        return "search";
+    }
+}
+---------------------------------------------------------------------------------------------------------
+package com.parking.parking.entity;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "bookings")
+public class Booking {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private Long userId;
+
+    private Long slotId;
+
+    private Long locationId;
+
+    @NotNull
+    private LocalDateTime startTime;
+
+    @NotNull
+    private LocalDateTime endTime;
+
+    @NotNull
+    private LocalDateTime bookingTime;
+
+    @Enumerated(EnumType.STRING)
+    private BookingStatus status;
+
+    private String qrCode;
+
+    public enum BookingStatus {
+        ACTIVE,
+        COMPLETED,
+        CANCELLED,
+        EXPIRED
+    }
+
+    // Constructors
+    public Booking() {}
+
+    public Booking(Long userId, Long slotId, Long locationId, LocalDateTime startTime, LocalDateTime endTime) {
+        this.userId = userId;
+        this.slotId = slotId;
+        this.locationId = locationId;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.bookingTime = LocalDateTime.now();
+        this.status = BookingStatus.ACTIVE;
+    }
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
+
+    public Long getSlotId() { return slotId; }
+    public void setSlotId(Long slotId) { this.slotId = slotId; }
+
+    public Long getLocationId() { return locationId; }
+    public void setLocationId(Long locationId) { this.locationId = locationId; }
+
+    public LocalDateTime getStartTime() { return startTime; }
+    public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
+
+    public LocalDateTime getEndTime() { return endTime; }
+    public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
+
+    public LocalDateTime getBookingTime() { return bookingTime; }
+    public void setBookingTime(LocalDateTime bookingTime) { this.bookingTime = bookingTime; }
+
+    public BookingStatus getStatus() { return status; }
+    public void setStatus(BookingStatus status) { this.status = status; }
+
+    public String getQrCode() { return qrCode; }
+    public void setQrCode(String qrCode) { this.qrCode = qrCode; }
+}
+--------------------------------------------------------------------------------------------------------
+package com.parking.parking.entity;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "parking_locations")
+public class ParkingLocation {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank
+    @Column(unique = true)
+    private String name;
+
+    @NotBlank
+    private String address;
+
+    @NotBlank
+    private String city;
+
+    @NotBlank
+    private String state;
+
+    @NotBlank
+    private String zipCode;
+
+    @NotNull
+    private BigDecimal latitude;
+
+    @NotNull
+    private BigDecimal longitude;
+
+    private Integer totalSlots;
+
+    private Integer availableSlots;
+
+    // Constructors
+    public ParkingLocation() {}
+
+    public ParkingLocation(String name, String address, String city, String state, String zipCode,
+                          BigDecimal latitude, BigDecimal longitude, Integer totalSlots) {
+        this.name = name;
+        this.address = address;
+        this.city = city;
+        this.state = state;
+        this.zipCode = zipCode;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.totalSlots = totalSlots;
+        this.availableSlots = totalSlots; // Initially all slots are available
+    }
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
+
+    public String getCity() { return city; }
+    public void setCity(String city) { this.city = city; }
+
+    public String getState() { return state; }
+    public void setState(String state) { this.state = state; }
+
+    public String getZipCode() { return zipCode; }
+    public void setZipCode(String zipCode) { this.zipCode = zipCode; }
+
+    public BigDecimal getLatitude() { return latitude; }
+    public void setLatitude(BigDecimal latitude) { this.latitude = latitude; }
+
+    public BigDecimal getLongitude() { return longitude; }
+    public void setLongitude(BigDecimal longitude) { this.longitude = longitude; }
+
+    public Integer getTotalSlots() { return totalSlots; }
+    public void setTotalSlots(Integer totalSlots) { this.totalSlots = totalSlots; }
+
+    public Integer getAvailableSlots() { return availableSlots; }
+    public void setAvailableSlots(Integer availableSlots) { this.availableSlots = availableSlots; }
+}
+--------------------------------------------------------------------------------------------------------
+package com.parking.parking.entity;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+@Entity
+@Table(name = "parking_slots")
+public class ParkingSlot {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank
+    private String slotNumber;
+
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "location_id")
+    private ParkingLocation location;
+
+    @Enumerated(EnumType.STRING)
+    private SlotStatus status;
+
+    public enum SlotStatus {
+        AVAILABLE,
+        OCCUPIED,
+        RESERVED,
+        MAINTENANCE
+    }
+
+    // Constructors
+    public ParkingSlot() {}
+
+    public ParkingSlot(String slotNumber, ParkingLocation location) {
+        this.slotNumber = slotNumber;
+        this.location = location;
+        this.status = SlotStatus.AVAILABLE;
+    }
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getSlotNumber() { return slotNumber; }
+    public void setSlotNumber(String slotNumber) { this.slotNumber = slotNumber; }
+
+    public ParkingLocation getLocation() { return location; }
+    public void setLocation(ParkingLocation location) { this.location = location; }
+
+    public SlotStatus getStatus() { return status; }
+    public void setStatus(SlotStatus status) { this.status = status; }
+}
+-------------------------------------------------------------------------------------------
+package com.parking.parking.entity;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+@Entity
+@Table(name = "users")
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank
+    @Size(max = 50)
+    @Column(unique = true)
+    private String username;
+
+    @NotBlank
+    @Email
+    @Size(max = 100)
+    @Column(unique = true)
+    private String email;
+
+    @NotBlank
+    @Size(max = 100)
+    private String password;
+
+    @NotBlank
+    @Size(max = 50)
+    private String firstName;
+
+    @NotBlank
+    @Size(max = 50)
+    private String lastName;
+
+    // Constructors
+    public User() {}
+
+    public User(String username, String email, String password, String firstName, String lastName) {
+        this.username = username;
+        this.email = email;
+        this.password = password;
+        this.firstName = firstName;
+        this.lastName = lastName;
+    }
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+}
+---------------------------------------------------------------------------------------------------------------
+package com.parking.parking.repository;
+
+import com.parking.parking.entity.Booking;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface BookingRepository extends JpaRepository<Booking, Long> {
+
+    List<Booking> findByUserId(Long userId);
+
+    List<Booking> findByUserIdOrderByBookingTimeDesc(Long userId);
+}
+--------------------------------------------------------------------------------------------------------------
+package com.parking.parking.repository;
+
+import com.parking.parking.entity.ParkingLocation;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface ParkingLocationRepository extends JpaRepository<ParkingLocation, Long> {
+
+    List<ParkingLocation> findByCity(String city);
+
+    List<ParkingLocation> findByState(String state);
+
+    List<ParkingLocation> findByCityAndState(String city, String state);
+
+    @Query("SELECT p FROM ParkingLocation p WHERE " +
+           "(6371 * acos(cos(radians(:latitude)) * cos(radians(p.latitude)) * " +
+           "cos(radians(p.longitude) - radians(:longitude)) + " +
+           "sin(radians(:latitude)) * sin(radians(p.latitude)))) <= :radiusKm")
+    List<ParkingLocation> findNearbyLocations(@Param("latitude") double latitude,
+                                             @Param("longitude") double longitude,
+                                             @Param("radiusKm") double radiusKm);
+
+    @Query("SELECT p FROM ParkingLocation p WHERE p.availableSlots > 0")
+    List<ParkingLocation> findAvailableLocations();
+
+    List<ParkingLocation> findByNameContainingIgnoreCase(String name);
+}
+-----------------------------------------------------------------------------------------------------------------
+package com.parking.parking.repository;
+
+import com.parking.parking.entity.ParkingSlot;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface ParkingSlotRepository extends JpaRepository<ParkingSlot, Long> {
+
+    List<ParkingSlot> findByLocationId(Long locationId);
+
+    List<ParkingSlot> findByLocationIdAndStatus(Long locationId, ParkingSlot.SlotStatus status);
+
+    @Query("SELECT COUNT(s) FROM ParkingSlot s WHERE s.location.id = :locationId AND s.status = 'AVAILABLE'")
+    long countAvailableSlotsByLocationId(@Param("locationId") Long locationId);
+
+    List<ParkingSlot> findByStatus(ParkingSlot.SlotStatus status);
+}
+--------------------------------------------------------------------------------------------------------------------
+package com.parking.parking.repository;
+
+import com.parking.parking.entity.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+
+    Optional<User> findByUsername(String username);
+    Optional<User> findByEmail(String email);
+    boolean existsByUsername(String username);
+    boolean existsByEmail(String email);
+}
+------------------------------------------------------------------------------------------------------------------
+package com.parking.parking.service;
+
+import com.parking.parking.entity.User;
+import com.parking.parking.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+@Service
+public class UserService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    public User registerUser(User user) {
+        if (userRepository.existsByUsername(user.getUsername())) {
+            throw new RuntimeException("Username already exists");
+        }
+        if (userRepository.existsByEmail(user.getEmail())) {
+            throw new RuntimeException("Email already exists");
+        }
+
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        return userRepository.save(user);
+    }
+
+    public User findByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+}
+------------------------------------------------------------------------------------------------------------------------
+package com.parking.parking;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class HomeController {
+
+    @GetMapping("/")
+    public String root() {
+        return "index";
+    }
+
+    @GetMapping("/home")
+    public String home() {
+        return "🚗 Parking App is Running!";
+    }
+}
+--------------------------------------------------------------------------------------------------------------------------
+package com.parking.parking;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class ParkingApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(ParkingApplication.class, args);
+	}
+
+}
+------------------------------------------------------------------------------------------------------------------------------
